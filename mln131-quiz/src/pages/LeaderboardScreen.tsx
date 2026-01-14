@@ -1,21 +1,31 @@
 import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Trophy, User, ArrowRight } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { gameService } from '../lib/gameService';
-import type { Player } from '../lib/gameService';
+import type { Player, Room } from '../lib/gameService';
 
 export const LeaderboardScreen: React.FC = () => {
-    const { currentRoom, currentPlayer } = useGameStore();
+    const { roomId } = useParams<{ roomId: string }>();
+    const navigate = useNavigate();
+    const { currentPlayer } = useGameStore();
     const [players, setPlayers] = useState<Player[]>([]);
+    const [room, setRoom] = useState<Room | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchLeaderboard = async () => {
-            if (!currentRoom?.id) return;
+            if (!roomId) return;
 
             try {
-                const roomPlayers = await gameService.getPlayers(currentRoom.id);
+                // Fetch room info
+                const rooms = await gameService.getRooms();
+                const currentRoom = rooms.find(r => r.id === roomId);
+                setRoom(currentRoom || null);
+
+                // Fetch players
+                const roomPlayers = await gameService.getPlayers(roomId);
                 setPlayers(roomPlayers);
             } catch (err) {
                 console.error('Fetch leaderboard error:', err);
@@ -27,8 +37,8 @@ export const LeaderboardScreen: React.FC = () => {
         fetchLeaderboard();
 
         // Subscribe to player updates for live leaderboard
-        if (currentRoom?.id) {
-            const channel = gameService.subscribeToPlayers(currentRoom.id, (updatedPlayers) => {
+        if (roomId) {
+            const channel = gameService.subscribeToPlayers(roomId, (updatedPlayers) => {
                 const sorted = updatedPlayers.sort((a, b) => b.score - a.score);
                 setPlayers(sorted);
             });
@@ -37,7 +47,7 @@ export const LeaderboardScreen: React.FC = () => {
                 channel.unsubscribe();
             };
         }
-    }, [currentRoom?.id]);
+    }, [roomId]);
 
     if (loading) {
         return (

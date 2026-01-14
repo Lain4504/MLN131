@@ -15,7 +15,8 @@ export const QuizScreen: React.FC = () => {
         submitAnswer,
         currentRoom,
         itemInventory,
-        lastRewardedItem
+        lastRewardedItem,
+        updateItemInventory
     } = useGameStore();
 
     const [timeLeft, setTimeLeft] = useState(30);
@@ -178,6 +179,9 @@ export const QuizScreen: React.FC = () => {
                 // Consume item first
                 await gameService.consumeItem(currentPlayer.id, type);
 
+                // Update local state immediately
+                updateItemInventory(type, -1);
+
                 await gameService.useItem(
                     currentPlayer.id,
                     currentPlayer.id, // Self-target for buffs
@@ -219,6 +223,9 @@ export const QuizScreen: React.FC = () => {
         try {
             // Consume item first
             await gameService.consumeItem(currentPlayer.id, activeItem.type);
+
+            // Update local state immediately
+            updateItemInventory(activeItem.type, -1);
 
             await gameService.useItem(
                 currentPlayer.id,

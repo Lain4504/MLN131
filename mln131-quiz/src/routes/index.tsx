@@ -5,6 +5,7 @@ import { RoomPage } from '../pages/RoomPage';
 import { AdminLogin } from '../pages/AdminLogin';
 import { RoomManagement } from '../pages/admin/RoomManagement';
 import { QuestionManagement } from '../pages/admin/QuestionManagement';
+import { LeaderboardScreen } from '../pages/LeaderboardScreen';
 import { useAdminStore } from '../store/useAdminStore';
 
 export const AppRoutes = () => {
@@ -15,6 +16,7 @@ export const AppRoutes = () => {
             {/* Public Routes */}
             <Route path="/" element={<EntryScreen />} />
             <Route path="/room/:roomCode" element={<RoomPage />} />
+            <Route path="/leaderboard/:roomId" element={<LeaderboardScreen />} />
 
             {/* Admin Routes */}
             <Route

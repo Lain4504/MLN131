@@ -27,6 +27,7 @@ interface GameState {
     setPlayers: (players: Player[]) => void;
     setCurrentQuestionIndex: (index: number) => void;
     startRoom: () => Promise<void>;
+    updateItemInventory: (itemType: string, delta: number) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -129,5 +130,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (currentRoom) {
             await gameService.updateRoomStatus(currentRoom.id, 'playing');
         }
+    },
+
+    updateItemInventory: (itemType, delta) => {
+        set((state) => ({
+            itemInventory: {
+                ...state.itemInventory,
+                [itemType]: Math.max(0, (state.itemInventory[itemType] || 0) + delta)
+            }
+        }));
     }
 }));
