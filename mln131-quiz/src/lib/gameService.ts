@@ -46,6 +46,14 @@ export const gameService = {
         return data as Room;
     },
 
+    async deleteRoom(roomId: string) {
+        const { error } = await supabase
+            .from('rooms')
+            .delete()
+            .eq('id', roomId);
+        if (error) throw error;
+    },
+
     async joinRoom(roomCode: string, playerName: string) {
         // 1. Find room
         const { data: room, error: roomError } = await supabase
@@ -104,6 +112,32 @@ export const gameService = {
             .order('created_at', { ascending: true });
         if (error) throw error;
         return data as Question[];
+    },
+
+    async createQuestion(question: { content: any }) {
+        const { data, error } = await supabase
+            .from('questions')
+            .insert([question])
+            .select()
+            .single();
+        if (error) throw error;
+        return data as Question;
+    },
+
+    async updateQuestion(id: string, updates: { content: any }) {
+        const { error } = await supabase
+            .from('questions')
+            .update(updates)
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    async deleteQuestion(id: string) {
+        const { error } = await supabase
+            .from('questions')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
     },
 
     // Gameplay
