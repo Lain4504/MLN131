@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Plus, Play, RefreshCcw, LayoutDashboard, Database, Users as UsersIcon, ArrowRight, Search, Filter, X, Calendar, UserCheck, GraduationCap, Copy, QrCode, Check } from 'lucide-react';
+import { Settings, Plus, Play, RefreshCcw, LayoutDashboard, Database, Users as UsersIcon, ArrowRight, Search, Filter, X, Calendar, UserCheck, GraduationCap, Copy, QrCode, Check, LogOut } from 'lucide-react';
 import { gameService } from '../lib/gameService';
+import { useAdminStore } from '../store/useAdminStore';
 
 export const AdminDashboard: React.FC = () => {
+    const navigate = useNavigate();
+    const { logout } = useAdminStore();
     const [activeTab, setActiveTab] = useState<'rooms' | 'questions' | 'live'>('rooms');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [rooms, setRooms] = useState<any[]>([]);
@@ -194,8 +198,14 @@ export const AdminDashboard: React.FC = () => {
                         <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Vai trò Vận hành</span>
                         <span className="text-xs font-bold uppercase">Giảng viên Cao cấp</span>
                     </div>
-                    <button className="flex items-center gap-3 text-[10px] font-black text-gray-400 hover:text-primary transition-colors uppercase tracking-[0.2em] group">
-                        <Settings size={14} className="group-hover:rotate-90 transition-transform duration-500" /> Tính toàn vẹn Hệ thống
+                    <button
+                        onClick={() => {
+                            useAdminStore.getState().logout();
+                            useNavigate()('/admin/login');
+                        }}
+                        className="flex items-center gap-3 text-[10px] font-black text-gray-400 hover:text-primary transition-colors uppercase tracking-[0.2em] group w-full"
+                    >
+                        <LogOut size={14} className="group-hover:translate-x-1 transition-transform" /> Đăng xuất
                     </button>
                 </div>
             </aside>

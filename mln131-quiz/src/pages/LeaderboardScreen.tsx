@@ -1,21 +1,54 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, User, ArrowRight, Target, Sparkles } from 'lucide-react';
+import { Trophy, User, ArrowRight } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
+import { gameService } from '../lib/gameService';
+import type { Player } from '../lib/gameService';
 
 export const LeaderboardScreen: React.FC = () => {
-    const { playerName } = useGameStore();
+    const { currentRoom, currentPlayer } = useGameStore();
+    const [players, setPlayers] = useState<Player[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Mock players for UI development
-    const mockPlayers = [
-        { name: "Tiến Thành", score: 12500, accuracy: 95 },
-        { name: "Minh Quân", score: 11200, accuracy: 90 },
-        { name: "Hương Giang", score: 10800, accuracy: 88 },
-        { name: "Quốc Anh", score: 9500, accuracy: 85 },
-        { name: "Thanh Hằng", score: 8900, accuracy: 82 },
-        { name: "Hoàng Long", score: 7500, accuracy: 80 },
-        { name: "Khánh Linh", score: 6800, accuracy: 75 },
-    ];
+    useEffect(() => {
+        const fetchLeaderboard = async () => {
+            if (!currentRoom?.id) return;
+
+            try {
+                const roomPlayers = await gameService.getPlayers(currentRoom.id);
+                setPlayers(roomPlayers);
+            } catch (err) {
+                console.error('Fetch leaderboard error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchLeaderboard();
+
+        // Subscribe to player updates for live leaderboard
+        if (currentRoom?.id) {
+            const channel = gameService.subscribeToPlayers(currentRoom.id, (updatedPlayers) => {
+                const sorted = updatedPlayers.sort((a, b) => b.score - a.score);
+                setPlayers(sorted);
+            });
+
+            return () => {
+                channel.unsubscribe();
+            };
+        }
+    }, [currentRoom?.id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-neutral-bg">
+                <div className="text-center space-y-4">
+                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-neutral-text font-bold">Đang tải bảng xếp hạng...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen py-16 px-6 flex flex-col items-center max-w-5xl mx-auto relative overflow-hidden bg-neutral-bg">
@@ -52,13 +85,13 @@ export const LeaderboardScreen: React.FC = () => {
 
                 <div className="glass-card !p-0 border-2 border-neutral-text/10 shadow-[12px_12px_0px_0px_rgba(153,27,27,0.1)]">
                     <div className="grid grid-cols-1 divide-y-2 divide-neutral-text/5">
-                        {mockPlayers.map((player, index) => (
+                        {players.map((player, index) => (
                             <motion.div
-                                key={index}
+                                key={player.id}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.1 }}
-                                className={`flex items-center gap-6 p-6 transition-all ${player.name === playerName
+                                className={`flex items-center gap-6 p-6 transition-all ${player.id === currentPlayer?.id
                                     ? 'bg-primary/5 border-l-8 border-primary'
                                     : 'hover:bg-neutral-bg'
                                     }`}
@@ -76,59 +109,48 @@ export const LeaderboardScreen: React.FC = () => {
                                     </div>
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-3">
-                                            <h3 className={`font-black text-xl tracking-tight ${player.name === playerName ? 'text-primary' : 'text-neutral-text'}`}>
+                                            <h3 className={`font-black text-xl tracking-tight ${player.id === currentPlayer?.id ? 'text-primary' : 'text-neutral-text'}`}>
                                                 {player.name.toUpperCase()}
                                             </h3>
-                                            {player.name === playerName && (
+                                            {player.id === currentPlayer?.id && (
                                                 <span className="bg-primary text-white text-[9px] font-black px-2 py-0.5 uppercase tracking-widest leading-none">
                                                     You
                                                 </span>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-4 mt-1">
-                                            <div className="flex items-center gap-1.5 opacity-60">
-                                                <Target size={12} className="text-primary" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Precision: {player.accuracy}%</span>
-                                            </div>
-                                            <div className="w-px h-3 bg-neutral-text/10" />
-                                            <div className="flex items-center gap-2">
-                                                <Sparkles size={12} className="text-secondary" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-secondary">Tactical Mastery</span>
-                                            </div>
+                                            <span className="text-[10px] font-black text-neutral-muted uppercase tracking-wider">
+                                                Rank #{index + 1}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="text-right pr-6">
-                                    <div className={`text-3xl font-black font-mono leading-none ${index < 3 ? 'text-neutral-text' : 'text-neutral-muted'}`}>
-                                        {player.score.toLocaleString()}
+                                <div className="text-right">
+                                    <div className="flex items-baseline gap-1 justify-end">
+                                        <span className="font-black text-3xl text-neutral-text leading-none">{player.score.toLocaleString()}</span>
+                                        <span className="text-[10px] font-black text-neutral-muted uppercase">pts</span>
                                     </div>
-                                    <label className="academic-label !mb-0 mt-1 !text-primary/40">Unit Points</label>
                                 </div>
                             </motion.div>
                         ))}
                     </div>
-
-                    <div className="p-8 bg-neutral-text/5 border-t-2 border-neutral-text/10 flex justify-between items-center">
-                        <div className="flex gap-10">
-                            <div>
-                                <label className="academic-label">Session Status</label>
-                                <span className="text-sm font-black uppercase tracking-tighter text-neutral-text">Conclusion Reached</span>
-                            </div>
-                            <div>
-                                <label className="academic-label">Average Accuracy</label>
-                                <span className="text-sm font-black uppercase tracking-tighter text-neutral-text">84.2% Theoretical Gain</span>
-                            </div>
-                        </div>
-                        <button className="btn-primary !px-10 !py-4 flex items-center gap-3 group">
-                            Archivize Session <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform" />
-                        </button>
-                    </div>
                 </div>
 
-                <footer className="mt-12 text-center opacity-40">
-                    <p className="text-[10px] font-black uppercase tracking-[0.5em]">Intellectual Integrity • FPT Academic Unit</p>
-                </footer>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="mt-12 flex justify-center"
+                >
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="btn-primary group"
+                    >
+                        <span>Chơi lại</span>
+                        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                </motion.div>
             </motion.div>
         </div>
     );

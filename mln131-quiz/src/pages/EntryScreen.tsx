@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { Users, Trophy, ChevronRight, GraduationCap, Binary } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -9,6 +10,7 @@ export const EntryScreen: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { joinRoom } = useGameStore();
+    const navigate = useNavigate();
 
     const handleJoin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,6 +19,8 @@ export const EntryScreen: React.FC = () => {
             setError(null);
             try {
                 await joinRoom(room, name);
+                // Navigate to room-specific URL
+                navigate(`/room/${room}`);
             } catch (err: any) {
                 setError(err.message || 'Có lỗi xảy ra khi vào phòng.');
             } finally {

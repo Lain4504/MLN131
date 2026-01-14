@@ -69,6 +69,17 @@ export const gameService = {
         return { room: room as Room, player: player as Player };
     },
 
+    async getPlayers(roomId: string) {
+        const { data, error } = await supabase
+            .from('players')
+            .select('*')
+            .eq('room_id', roomId)
+            .order('score', { ascending: false });
+
+        if (error) throw error;
+        return data as Player[];
+    },
+
     async updateRoomStatus(roomId: string, status: Room['status']) {
         const { error } = await supabase
             .from('rooms')

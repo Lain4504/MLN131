@@ -22,9 +22,10 @@ export const QuizScreen: React.FC = () => {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [activeItem, setActiveItem] = useState<{ label: string, color: string, type?: string } | null>(null);
     const [showTargeting, setShowTargeting] = useState(false);
-    const [activeDebuffs, setActiveDebuffs] = useState<string[]>([]); // Track active debuffs
-    const [timeBonus, setTimeBonus] = useState(0); // Extra time from items
+    const [activeDebuffs, setActiveDebuffs] = useState<string[]>([]);
+    const [timeBonus, setTimeBonus] = useState(0);
     const [showRewardNotification, setShowRewardNotification] = useState(false);
+    const [itemQueue, setItemQueue] = useState<any[]>([]);
 
     const question = questions[currentQuestionIndex] || {
         content: {
@@ -35,12 +36,41 @@ export const QuizScreen: React.FC = () => {
         }
     };
 
-    // Subscribe to items used on this player
+    // Subscribe to items used on this player with AUTO-SHIELD
     useEffect(() => {
         if (!currentPlayer?.id) return;
 
-        const channel = gameService.subscribeToItems(currentPlayer.id, (item: any) => {
+        const channel = gameService.subscribeToItems(currentPlayer.id, async (item: any) => {
             console.log('Received item:', item);
+
+            // AUTO-SHIELD: Check if player has shield and item is a debuff
+            const hasShield = itemInventory.shield > 0;
+            const isDebuff = item.item_type === 'time_attack' || item.item_type === 'confusion';
+
+            if (hasShield && isDebuff) {
+                try {
+                    // Auto-consume shield to block attack
+                    await gameService.consumeItem(currentPlayer.id, 'shield');
+
+                    // Show shield block notification
+                    setActiveItem({
+                        label: `🛡️ Shield chặn ${item.item_type}!`,
+                        color: 'yellow',
+                        type: 'shield_block'
+                    });
+
+                    setTimeout(() => setActiveItem(null), 3000);
+
+                    console.log('Shield auto-activated! Attack blocked.');
+                    return; // Block the attack - don't queue it
+                } catch (err) {
+                    console.error('Shield activation failed:', err);
+                    // If shield fails, continue to apply debuff
+                }
+            }
+
+            // No shield or shield failed - add to queue
+            setItemQueue(prev => [...prev, item]);
 
             // Show notification
             setActiveItem({
@@ -49,24 +79,52 @@ export const QuizScreen: React.FC = () => {
                 type: item.item_type
             });
 
-            // Apply debuff effect
-            if (item.item_type === 'time_attack') {
-                setTimeLeft(prev => Math.max(0, prev - 5));
-                setActiveDebuffs(prev => [...prev, 'time_attack']);
-            } else if (item.item_type === 'confusion') {
-                setActiveDebuffs(prev => [...prev, 'confusion']);
-            }
-
             setTimeout(() => {
                 setActiveItem(null);
-                setActiveDebuffs(prev => prev.filter(d => d !== item.item_type));
             }, 3000);
         });
 
         return () => {
             channel.unsubscribe();
         };
-    }, [currentPlayer?.id]);
+    }, [currentPlayer?.id, itemInventory.shield]);
+
+    // ITEM QUEUE: Process queued items independently
+    useEffect(() => {
+        if (itemQueue.length === 0) return;
+
+        const processNextItem = () => {
+            const item = itemQueue[0];
+
+            console.log('Processing queued item:', item);
+
+            // Apply debuff effect (works even if already answered)
+            if (item.item_type === 'time_attack') {
+                setTimeLeft(prev => Math.max(0, prev - 5));
+                setActiveDebuffs(prev => {
+                    if (!prev.includes('time_attack')) {
+                        return [...prev, 'time_attack'];
+                    }
+                    return prev;
+                });
+            } else if (item.item_type === 'confusion') {
+                setActiveDebuffs(prev => {
+                    if (!prev.includes('confusion')) {
+                        return [...prev, 'confusion'];
+                    }
+                    return prev;
+                });
+            }
+
+            // Remove from queue and clear debuff after 3s
+            setTimeout(() => {
+                setItemQueue(prev => prev.slice(1));
+                setActiveDebuffs(prev => prev.filter(d => d !== item.item_type));
+            }, 3000);
+        };
+
+        processNextItem();
+    }, [itemQueue]);
 
     // Show reward notification when receiving item
     useEffect(() => {
