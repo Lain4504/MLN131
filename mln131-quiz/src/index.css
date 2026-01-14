@@ -22,6 +22,10 @@
 
   --shadow-premium: 0 10px 30px -10px rgba(153, 27, 27, 0.2);
   --shadow-gold: 0 10px 30px -10px rgba(180, 83, 9, 0.2);
+  --shadow-constructivist: 8px 8px 0px 0px rgba(153, 27, 27, 0.1);
+  --shadow-constructivist-lg: 20px 20px 0px 0px rgba(153, 27, 27, 0.1);
+  --shadow-constructivist-lg-dark: 20px 20px 0px 0px rgba(153, 27, 27, 0.2);
+  --shadow-constructivist-primary: 8px 8px 0px 0px #991B1B;
 
   --radius-academic: 2px;
   /* Constructivist sharp edges mixed with subtle rounds */
@@ -54,7 +58,7 @@
   }
 
   .glass-card {
-    @apply bg-white border-2 border-neutral-text/10 shadow-[8px_8px_0px_0px_rgba(153, 27, 27, 0.1)] p-8;
+    @apply bg-white border-2 border-neutral-text/10 shadow-constructivist p-8;
   }
 
   .constructivist-box {

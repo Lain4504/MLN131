@@ -1,205 +1,330 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Timer, Trophy, Shield, Zap, Sparkles, Ghost, Lightbulb, User, ShieldCheck, Target as TargetIcon, X } from 'lucide-react';
+import { Timer, Trophy, Shield, Zap, Sparkles, Ghost, User, ShieldCheck, Target as TargetIcon, X } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
+import { gameService } from '../lib/gameService';
 
 export const QuizScreen: React.FC = () => {
-    const { score, currentQuestionIndex } = useGameStore();
+    const {
+        score,
+        currentQuestionIndex,
+        questions,
+        currentPlayer,
+        players,
+        rank,
+        submitAnswer,
+        currentRoom
+    } = useGameStore();
+
     const [timeLeft, setTimeLeft] = useState(30);
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
-    const [activeItem, setActiveItem] = useState<{ label: string, color: string } | null>(null);
+    const [activeItem, setActiveItem] = useState<{ label: string, color: string, type?: string } | null>(null);
     const [showTargeting, setShowTargeting] = useState(false);
+    const [activeDebuffs, setActiveDebuffs] = useState<string[]>([]); // Track active debuffs
+    const [timeBonus, setTimeBonus] = useState(0); // Extra time from items
 
-    // Mock question for UI development
-    const question = {
-        text: "Học thuyết nào sau đây là 'hòn đá tảng' của kinh tế chính trị học Mác - Lênin?",
-        options: [
-            "Học thuyết về giá trị thặng dư",
-            "Học thuyết về sứ mệnh lịch sử của giai cấp công nhân",
-            "Học thuyết về chủ nghĩa duy vật lịch sử",
-            "Học thuyết về đấu tranh giai cấp"
-        ]
+    const question = questions[currentQuestionIndex] || {
+        content: {
+            question: "Đang tải câu hỏi...",
+            options: ["...", "...", "...", "..."],
+            correct_index: 0,
+            difficulty: "Bình thường"
+        }
     };
+
+    // Subscribe to items used on this player
+    useEffect(() => {
+        if (!currentPlayer?.id) return;
+
+        const channel = gameService.subscribeToItems(currentPlayer.id, (item: any) => {
+            console.log('Received item:', item);
+
+            // Show notification
+            setActiveItem({
+                label: `${item.item_type} từ đối thủ!`,
+                color: 'red',
+                type: item.item_type
+            });
+
+            // Apply debuff effect
+            if (item.item_type === 'time_attack') {
+                setTimeLeft(prev => Math.max(0, prev - 5));
+                setActiveDebuffs(prev => [...prev, 'time_attack']);
+            } else if (item.item_type === 'confusion') {
+                setActiveDebuffs(prev => [...prev, 'confusion']);
+            }
+
+            setTimeout(() => {
+                setActiveItem(null);
+                setActiveDebuffs(prev => prev.filter(d => d !== item.item_type));
+            }, 3000);
+        });
+
+        return () => {
+            channel.unsubscribe();
+        };
+    }, [currentPlayer?.id]);
 
     useEffect(() => {
         if (timeLeft > 0) {
             const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
             return () => clearTimeout(timer);
+        } else if (selectedOption === null) {
+            handleAnswer(null);
         }
     }, [timeLeft]);
 
-    const handleItemClick = (label: string, color: 'yellow' | 'red') => {
+    useEffect(() => {
+        setTimeLeft(30 + timeBonus);
+        setSelectedOption(null);
+        setTimeBonus(0); // Reset time bonus for new question
+    }, [currentQuestionIndex]);
+
+    const handleAnswer = async (index: number | null) => {
+        setSelectedOption(index);
+        const isCorrect = index === question.content.correct_index;
+        const timeUsed = (30 - timeLeft) * 1000;
+        await submitAnswer(isCorrect, timeUsed);
+    };
+
+    const handleItemClick = async (label: string, type: string, color: 'yellow' | 'red') => {
+        if (!currentPlayer || !currentRoom) return;
+
         if (color === 'red') {
+            // Debuff - need to select target
             setShowTargeting(true);
-            setActiveItem({ label, color });
+            setActiveItem({ label, color, type });
         } else {
-            // Instant buff
-            setActiveItem({ label, color });
-            setTimeout(() => setActiveItem(null), 2000);
+            // Buff - apply immediately
+            setActiveItem({ label, color, type });
+
+            try {
+                await gameService.useItem(
+                    currentPlayer.id,
+                    currentPlayer.id, // Self-target for buffs
+                    type,
+                    currentQuestionIndex
+                );
+
+                // Apply buff effect
+                if (type === 'time_extend') {
+                    setTimeLeft(prev => prev + 5);
+                    setTimeBonus(5);
+                } else if (type === 'shield') {
+                    setActiveDebuffs([]); // Clear all debuffs
+                }
+
+                setTimeout(() => setActiveItem(null), 2000);
+            } catch (err) {
+                console.error('Use item error:', err);
+                alert('Không thể sử dụng vật phẩm');
+            }
         }
     };
 
-    const confirmTarget = (targetName: string) => {
+    const confirmTarget = async (targetPlayerId: string, targetName: string) => {
+        if (!currentPlayer || !activeItem?.type) return;
+
         setShowTargeting(false);
-        setActiveItem({ label: `Đang dùng ${activeItem?.label} lên ${targetName}`, color: 'red' });
-        setTimeout(() => setActiveItem(null), 3000);
+        setActiveItem({ label: `Đang dùng ${activeItem.label} lên ${targetName}`, color: 'red', type: activeItem.type });
+
+        try {
+            await gameService.useItem(
+                currentPlayer.id,
+                targetPlayerId,
+                activeItem.type,
+                currentQuestionIndex
+            );
+
+            setTimeout(() => setActiveItem(null), 3000);
+        } catch (err) {
+            console.error('Use item error:', err);
+            alert('Không thể sử dụng vật phẩm');
+        }
     };
 
     return (
-        <div className="min-h-screen py-8 px-6 flex flex-col max-w-6xl mx-auto relative overflow-hidden bg-neutral-bg">
+        <div className="h-screen bg-neutral-bg relative overflow-hidden flex flex-col">
             <div className="absolute inset-0 pattern-dots opacity-[0.03] text-primary" />
 
-            {/* Top Navigation / Status Header */}
-            <header className="flex justify-between items-start mb-16 relative z-10 border-b-2 border-neutral-text/5 pb-8">
-                <div className="flex gap-10">
-                    <div className="flex flex-col">
-                        <label className="academic-label">Academic Identity</label>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary flex items-center justify-center text-white font-black">P</div>
-                            <div>
-                                <p className="font-bold text-sm leading-none">Comrade Researcher</p>
-                                <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest mt-1">Section: MLN131-01</p>
+            <div className="absolute -bottom-20 -left-20 w-96 h-96 opacity-[0.05] pointer-events-none grayscale contrast-125 rotate-12 hidden lg:block">
+                <img src="/vietnam_academic_motif_lotus.png" alt="Lotus Motif" className="w-full h-full object-contain" />
+            </div>
+
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10">
+                {/* Main Content */}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* Compact Header */}
+                    <header className="flex justify-between items-center px-4 lg:px-8 py-3 lg:py-4 border-b-2 border-neutral-text/5 bg-white/50 backdrop-blur-sm flex-shrink-0">
+                        <div className="flex gap-4 lg:gap-8 items-center">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 lg:w-10 lg:h-10 bg-primary flex items-center justify-center text-white font-black text-sm lg:text-base shadow-lg">
+                                    {currentPlayer?.name[0].toUpperCase() || 'P'}
+                                </div>
+                                <div className="hidden sm:block">
+                                    <p className="font-bold text-xs lg:text-sm leading-none uppercase tracking-tight">{currentPlayer?.name || 'Cán bộ'}</p>
+                                    <p className="text-[9px] lg:text-[10px] text-primary font-black uppercase tracking-wider mt-0.5">{currentRoom?.room_code || 'MLN131'}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-baseline gap-1">
+                                    <Trophy className="text-secondary" size={14} />
+                                    <span className="font-black text-xl lg:text-2xl text-neutral-text leading-none">{score.toLocaleString()}</span>
+                                </div>
+
+                                <div className="hidden md:flex items-baseline gap-1 border-l-2 border-neutral-text/5 pl-4">
+                                    <span className="text-[10px] font-black text-neutral-text/40 uppercase">Hạng</span>
+                                    <span className="font-black text-lg text-neutral-text">{rank}</span>
+                                    <span className="text-xs font-bold text-neutral-muted">/{players.length}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="w-32 lg:w-48">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-[9px] lg:text-[10px] font-black text-neutral-text/40 uppercase">Thời gian</span>
+                                <span className={`text-xs font-mono font-black ${timeLeft < 10 ? 'text-primary animate-pulse' : 'text-neutral-text'}`}>
+                                    {timeLeft}s
+                                </span>
+                            </div>
+                            <div className="w-full h-2 bg-neutral-text/5 border border-neutral-text/10 relative overflow-hidden">
+                                <motion.div
+                                    className={`h-full ${timeLeft < 10 ? 'bg-primary' : 'bg-accent-blue'} transition-colors`}
+                                    initial={{ width: '100%' }}
+                                    animate={{ width: `${(timeLeft / 30) * 100}%` }}
+                                    transition={{ duration: 1, ease: "linear" }}
+                                />
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Question Area */}
+                    <main className="flex-1 overflow-y-auto px-4 lg:px-8 py-4 lg:py-6">
+                        <motion.div
+                            key={currentQuestionIndex}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="mb-4 lg:mb-6"
+                        >
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-3 h-0.5 bg-primary" />
+                                <span className="text-[9px] font-black text-primary uppercase tracking-wider">Câu {currentQuestionIndex + 1}</span>
+                            </div>
+                            <h2 className="text-xl lg:text-3xl font-serif font-black text-neutral-text leading-tight">
+                                {question.content.question}
+                            </h2>
+                        </motion.div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4">
+                            {question.content.options.map((option: string, index: number) => (
+                                <motion.button
+                                    key={index}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    onClick={() => handleAnswer(index)}
+                                    disabled={selectedOption !== null}
+                                    className={`text-left p-4 lg:p-5 border-2 transition-all duration-300 group relative ${selectedOption === index
+                                        ? 'border-primary bg-primary/[0.03] shadow-constructivist-primary -translate-y-0.5'
+                                        : 'border-neutral-text/5 bg-white hover:border-primary/40 hover:bg-neutral-bg hover:shadow-lg'
+                                        } ${selectedOption !== null && selectedOption !== index ? 'opacity-50 grayscale' : ''}`}
+                                >
+                                    <div className="flex gap-3 lg:gap-4 items-start relative z-10">
+                                        <span className={`w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center font-black text-xs lg:text-sm transition-all flex-shrink-0 ${selectedOption === index
+                                            ? 'bg-primary text-white scale-110'
+                                            : 'bg-neutral-text/5 text-neutral-text/40 group-hover:bg-primary/10 group-hover:text-primary'
+                                            }`}>
+                                            {String.fromCharCode(65 + index)}
+                                        </span>
+                                        <span className={`font-bold text-sm lg:text-lg leading-snug pt-0.5 transition-colors ${selectedOption === index ? 'text-primary' : 'text-neutral-text group-hover:text-primary'}`}>
+                                            {option}
+                                        </span>
+                                    </div>
+                                    <div className={`absolute top-0 right-0 w-2 h-full bg-primary transition-transform origin-right duration-300 ${selectedOption === index ? 'scale-x-100' : 'scale-x-0'}`} />
+                                </motion.button>
+                            ))}
+                        </div>
+                    </main>
+
+                    {/* Compact Footer */}
+                    <footer className="px-4 lg:px-8 py-3 lg:py-4 border-t-2 border-neutral-text/5 bg-white/50 backdrop-blur-sm flex-shrink-0">
+                        <div className="flex items-center gap-3 lg:gap-4 overflow-x-auto">
+                            <span className="text-[9px] font-black text-neutral-text/40 uppercase tracking-wider flex-shrink-0 hidden sm:block">Vật phẩm:</span>
+                            <ItemButton icon={<Sparkles size={16} />} label="Gia tăng" color="yellow" onClick={() => handleItemClick('Gia tăng Điểm', 'score_boost', 'yellow')} />
+                            <ItemButton icon={<Timer size={16} />} label="Hãn chế" color="yellow" onClick={() => handleItemClick('Kéo dài Thời gian', 'time_extend', 'yellow')} />
+                            <ItemButton icon={<Shield size={16} />} label="Miễn dịch" color="yellow" onClick={() => handleItemClick('Khiên Miễn dịch', 'shield', 'yellow')} />
+                            <div className="w-px h-8 bg-neutral-text/10" />
+                            <ItemButton icon={<Ghost size={16} />} label="Gây nhiễu" color="red" onClick={() => handleItemClick('Nhiễu loạn Phương án', 'confusion', 'red')} />
+                            <ItemButton icon={<Zap size={16} />} label="Công kích" color="red" onClick={() => handleItemClick('Công kích Thời gian', 'time_attack', 'red')} />
+                        </div>
+                    </footer>
+                </div>
+
+                {/* Sidebar - Hidden on mobile */}
+                <aside className="hidden lg:flex w-80 flex-col gap-4 p-4 bg-neutral-text/5 border-l-2 border-neutral-text/5 overflow-y-auto flex-shrink-0">
+                    <div className="bg-neutral-text text-white p-6 relative overflow-hidden shadow-xl">
+                        <div className="absolute top-0 right-0 w-24 h-24 pattern-dots opacity-10 text-primary rotate-45" />
+                        <div className="relative z-10">
+                            <label className="text-[10px] font-black text-white/40 uppercase tracking-wider mb-4 block">Bảng xếp hạng</label>
+                            <div className="space-y-2">
+                                {players.slice(0, 5).map((player, i) => {
+                                    const isMe = player.id === currentPlayer?.id;
+                                    const playerRank = i + 1;
+                                    return isMe ? (
+                                        <div key={player.id} className="bg-primary p-4 border-l-4 border-white shadow-xl -mx-2 px-4 relative overflow-hidden">
+                                            <div className="absolute inset-0 pattern-dots opacity-20" />
+                                            <div className="flex justify-between items-center relative z-10">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-black text-base">#{playerRank}</span>
+                                                    <div>
+                                                        <p className="font-black text-xs uppercase tracking-wide">{player.name}</p>
+                                                        <p className="text-[8px] font-bold text-white/60">ĐANG TRANH TÀI</p>
+                                                    </div>
+                                                </div>
+                                                <span className="font-black text-lg">{player.score}</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div key={player.id} className="flex justify-between items-center p-3 border-b border-white/10 hover:bg-white/5 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-black text-white/20 text-sm">{playerRank}</span>
+                                                <div>
+                                                    <p className="font-bold text-[10px]">{player.name}</p>
+                                                    <p className="text-[8px] font-black text-white/20">TRỰC TUYẾN</p>
+                                                </div>
+                                            </div>
+                                            <span className="font-black text-sm">{player.score}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
+                </aside>
+            </div>
 
-                    <div className="flex flex-col">
-                        <label className="academic-label">Scientific Output (Score)</label>
-                        <div className="flex items-baseline gap-2">
-                            <span className="font-black text-4xl text-neutral-text leading-none">{score.toLocaleString()}</span>
-                            <Trophy className="text-secondary" size={16} />
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col">
-                        <label className="academic-label">Competitive Standing</label>
-                        <div className="flex items-baseline gap-1">
-                            <span className="font-black text-2xl text-neutral-text">12</span>
-                            <span className="text-xs font-bold text-neutral-muted">/ 48</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex flex-col items-end w-64">
-                    <div className="flex justify-between w-full mb-1">
-                        <label className="academic-label">Theoretical Timeframe</label>
-                        <span className={`text-xs font-mono font-black ${timeLeft < 10 ? 'text-primary animate-pulse' : 'text-neutral-text'}`}>
-                            {timeLeft < 10 ? `0${timeLeft}` : timeLeft}s
-                        </span>
-                    </div>
-                    <div className="w-full h-3 bg-neutral-text/5 border border-neutral-text/10 relative">
-                        <motion.div
-                            className={`h-full ${timeLeft < 10 ? 'bg-primary' : 'bg-accent-blue'} transition-colors`}
-                            initial={{ width: '100%' }}
-                            animate={{ width: `${(timeLeft / 30) * 100}%` }}
-                            transition={{ duration: 1, ease: "linear" }}
-                        />
-                        <div className="absolute top-0 left-0 w-full h-full pattern-dots opacity-20" />
-                    </div>
-                </div>
-            </header>
-
-            {/* Item Activation Notification */}
+            {/* Item Notification */}
             <AnimatePresence>
                 {activeItem && !showTargeting && (
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
-                        className={`fixed top-32 right-8 p-4 border-l-4 shadow-2xl z-50 bg-white ${activeItem.color === 'yellow' ? 'border-secondary text-secondary' : 'border-primary text-primary'}`}
+                        className={`fixed top-20 right-4 p-4 border-l-8 shadow-2xl z-50 bg-white min-w-[240px] ${activeItem.color === 'yellow' ? 'border-secondary text-secondary' : 'border-primary text-primary'}`}
                     >
                         <div className="flex items-center gap-4">
-                            {activeItem.color === 'yellow' ? <ShieldCheck size={24} /> : <TargetIcon size={24} />}
+                            <div className={`p-2 ${activeItem.color === 'yellow' ? 'bg-secondary/10' : 'bg-primary/10'}`}>
+                                {activeItem.color === 'yellow' ? <ShieldCheck size={24} /> : <TargetIcon size={24} />}
+                            </div>
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Tactical Execution</p>
-                                <p className="font-black text-sm uppercase tracking-tighter">{activeItem.label} ACTIVE</p>
+                                <p className="text-[8px] font-black uppercase tracking-wider opacity-50">Triển khai</p>
+                                <p className="font-black text-sm uppercase tracking-tight leading-tight">{activeItem.label}</p>
                             </div>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Question Section */}
-            <main className="flex-1 flex flex-col justify-center gap-16 relative z-10">
-                <motion.div
-                    key={currentQuestionIndex}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="constructivist-box max-w-3xl"
-                >
-                    <div className="absolute -top-3 -left-1 px-3 py-1 bg-primary text-white text-[10px] font-black uppercase tracking-widest leading-none">
-                        Thesis {currentQuestionIndex + 1}
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <Lightbulb size={14} className="text-secondary" />
-                            <span className="text-[10px] font-bold text-primary/60 uppercase tracking-[0.3em]">Materialist Dialectics • Unit 04</span>
-                        </div>
-                        <h2 className="text-4xl md:text-5xl font-serif font-black text-neutral-text leading-[1.15] tracking-tight max-w-2xl">
-                            {question.text}
-                        </h2>
-                    </div>
-                </motion.div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
-                    {question.options.map((option, index) => (
-                        <motion.button
-                            key={index}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            onClick={() => setSelectedOption(index)}
-                            className={`text-left p-6 border-2 transition-all duration-200 group relative ${selectedOption === index
-                                    ? 'border-primary bg-primary/5 shadow-[6px_6px_0px_0px_rgba(153,27,27,1)]'
-                                    : 'border-neutral-text/10 bg-white hover:border-neutral-text/20 hover:bg-neutral-bg'
-                                }`}
-                        >
-                            <div className="flex gap-5 items-start relative z-10">
-                                <span className={`w-8 h-8 flex items-center justify-center font-black text-sm transition-colors ${selectedOption === index ? 'bg-primary text-white' : 'bg-neutral-text/5 text-neutral-text/40 group-hover:bg-neutral-text/10'
-                                    }`}>
-                                    {String.fromCharCode(65 + index)}
-                                </span>
-                                <span className={`font-bold text-lg leading-snug pt-0.5 transition-colors ${selectedOption === index ? 'text-neutral-text' : 'text-neutral-text group-hover:text-primary'
-                                    }`}>
-                                    {option}
-                                </span>
-                            </div>
-                        </motion.button>
-                    ))}
-                </div>
-            </main>
-
-            {/* Tactical Arsenal (Items) */}
-            <footer className="mt-20 pt-10 border-t-2 border-neutral-text/5 flex items-center justify-between relative z-10">
-                <div className="flex flex-col">
-                    <label className="academic-label mb-4">Strategic Inventory</label>
-                    <div className="flex items-center gap-4">
-                        <ItemButton icon={<Sparkles size={18} />} label="Amplifier" color="yellow" tooltip="X2 Score Multiplier" onClick={() => handleItemClick('Point Amplifier', 'yellow')} />
-                        <ItemButton icon={<Timer size={18} />} label="Extension" color="yellow" tooltip="+5s Temporal Buffer" onClick={() => handleItemClick('Time Extension', 'yellow')} />
-                        <ItemButton icon={<Shield size={18} />} label="Aegis" color="yellow" tooltip="Full Debuff Immunity" onClick={() => handleItemClick('Aegis Shield', 'yellow')} />
-                        <div className="w-px h-10 bg-neutral-text/10 mx-2" />
-                        <ItemButton icon={<Ghost size={18} />} label="Obfuscation" color="red" tooltip="Eliminate Wrong Option" onClick={() => handleItemClick('Option Obfuscator', 'red')} />
-                        <ItemButton icon={<Zap size={18} />} label="Disruption" color="red" tooltip="-5s Adversary Window" onClick={() => handleItemClick('Temporal Disruption', 'red')} />
-                    </div>
-                </div>
-
-                <div className="hidden lg:flex flex-col items-end">
-                    <label className="academic-label mb-2">Live Standings</label>
-                    <div className="space-y-1 w-48 font-mono text-[10px]">
-                        {[
-                            { name: '1. TOP_SCORE', score: 14500, color: 'text-secondary' },
-                            { name: '2. ELITE_RESEARCHER', score: 12100, color: 'text-neutral-text' },
-                            { name: '12. YOU (COMRADE)', score: 8400, color: 'text-primary' },
-                        ].map((rank, i) => (
-                            <div key={i} className={`flex justify-between py-1 border-b border-neutral-text/5 ${rank.color}`}>
-                                <span>{rank.name}</span>
-                                <span className="font-black">{rank.score}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </footer>
 
             {/* Targeting Overlay */}
             <AnimatePresence>
@@ -208,45 +333,45 @@ export const QuizScreen: React.FC = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-neutral-bg/95 backdrop-blur-sm z-[100] flex flex-col items-center justify-center p-8"
+                        className="fixed inset-0 bg-neutral-text/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 overflow-y-auto"
                     >
                         <div className="absolute inset-0 pattern-dots opacity-10 text-primary" />
 
                         <button
                             onClick={() => setShowTargeting(false)}
-                            className="absolute top-10 right-10 text-neutral-text/40 hover:text-primary transition-colors p-2"
+                            className="absolute top-4 right-4 text-white/40 hover:text-primary transition-all p-2 border-2 border-white/10 hover:border-primary"
                         >
-                            <X size={32} />
+                            <X size={24} />
                         </button>
 
-                        <div className="text-center mb-16 relative">
-                            <div className="w-16 h-16 bg-primary text-white flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                        <div className="text-center mb-8 relative">
+                            <div className="w-16 h-16 bg-primary text-white flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(153,27,27,0.4)] relative">
                                 <TargetIcon size={32} />
+                                <div className="absolute -inset-2 border border-primary/40 animate-ping opacity-20" />
                             </div>
-                            <label className="academic-label text-center mb-2">Tactical Selection</label>
-                            <h3 className="text-4xl font-serif font-black text-neutral-text uppercase tracking-tighter">SELECT ADVERSARY</h3>
-                            <p className="text-neutral-muted font-medium mt-2 italic">Executing: <span className="text-primary font-bold">{activeItem?.label}</span></p>
+                            <label className="text-[10px] font-black text-white/40 uppercase tracking-wider mb-1 block">Chỉ định Đối tượng</label>
+                            <h3 className="text-3xl lg:text-4xl font-serif font-black text-white uppercase tracking-tighter">THỰC THI CÔNG KÍCH</h3>
+                            <p className="text-white/60 font-medium mt-2 text-sm">Hành động: <span className="text-primary font-bold uppercase">{activeItem?.label}</span></p>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-4xl w-full">
-                            {['Minh Quân', 'Thanh Hằng', 'Hoàng Long', 'Khánh Linh', 'Quốc Anh', 'Hải Nam'].map((name) => (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl w-full">
+                            {players.filter(p => p.id !== currentPlayer?.id).map((player) => (
                                 <motion.button
-                                    key={name}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => confirmTarget(name)}
-                                    className="bg-white border-2 border-neutral-text/10 p-6 hover:border-primary transition-colors group relative overflow-hidden"
+                                    key={player.id}
+                                    whileHover={{ y: -5 }}
+                                    onClick={() => confirmTarget(player.id, player.name)}
+                                    className="bg-white/5 border-2 border-white/10 p-6 hover:border-primary hover:bg-white/10 transition-all group relative overflow-hidden"
                                 >
                                     <div className="relative z-10 flex flex-col items-center gap-4">
-                                        <div className="w-12 h-12 bg-neutral-text/5 flex items-center justify-center text-neutral-text/40 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                        <div className="w-12 h-12 bg-white/5 flex items-center justify-center text-white/20 group-hover:bg-primary group-hover:text-white transition-all shadow-inner">
                                             <User size={24} />
                                         </div>
-                                        <div>
-                                            <span className="text-neutral-text font-black text-sm block">{name.toUpperCase()}</span>
-                                            <span className="text-[9px] text-neutral-muted font-black uppercase tracking-widest">Efficiency: 88%</span>
+                                        <div className="text-center">
+                                            <span className="text-white font-black text-sm block tracking-tight">{player.name.toUpperCase()}</span>
+                                            <span className="text-[8px] text-white/30 font-black uppercase tracking-wider mt-1 group-hover:text-primary transition-colors">Điểm: {player.score}</span>
                                         </div>
                                     </div>
-                                    <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-neutral-text/10 group-hover:border-primary transition-colors" />
+                                    <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary transition-all" />
                                 </motion.button>
                             ))}
                         </div>
@@ -257,18 +382,14 @@ export const QuizScreen: React.FC = () => {
     );
 };
 
-const ItemButton: React.FC<{ icon: React.ReactNode, label: string, color: 'yellow' | 'red', tooltip: string, onClick?: () => void }> = ({ icon, label, color, tooltip, onClick }) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-2 group cursor-pointer relative">
-        <div className={`w-12 h-12 flex items-center justify-center transition-all duration-200 border-2 ${color === 'yellow'
-            ? 'bg-neutral-bg text-secondary border-secondary/20 hover:bg-secondary hover:text-white hover:border-secondary'
-            : 'bg-neutral-bg text-primary border-primary/20 hover:bg-primary hover:text-white hover:border-primary'
+const ItemButton: React.FC<{ icon: React.ReactNode, label: string, color: 'yellow' | 'red', onClick?: () => void }> = ({ icon, label, color, onClick }) => (
+    <button onClick={onClick} className="flex flex-col items-center gap-1 lg:gap-2 group cursor-pointer relative flex-shrink-0">
+        <div className={`w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center transition-all duration-300 border-2 shadow-sm ${color === 'yellow'
+            ? 'bg-neutral-bg text-secondary border-secondary/20 hover:bg-secondary hover:text-white hover:border-secondary hover:shadow-secondary/20 hover:shadow-lg'
+            : 'bg-neutral-bg text-primary border-primary/20 hover:bg-primary hover:text-white hover:border-primary hover:shadow-primary/20 hover:shadow-lg'
             }`}>
             {icon}
         </div>
-        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-muted group-hover:text-neutral-text transition-colors">{label}</span>
-        <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-neutral-text text-white text-[9px] font-bold rounded-none opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-            {tooltip}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-neutral-text" />
-        </div>
+        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-wider text-neutral-muted group-hover:text-primary transition-colors whitespace-nowrap">{label}</span>
     </button>
 );

@@ -29,7 +29,7 @@ function App() {
                 onClick={() => useGameStore.getState().setStatus('playing')}
                 className="mt-4 text-xs text-gray-400 hover:underline"
               >
-                (Demo: Click để bắt đầu game)
+                (Demo: Bấm để bắt đầu ngay)
               </button>
             </div>
           </div>

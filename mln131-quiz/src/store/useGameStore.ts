@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { gameService } from '../lib/gameService';
+import type { Room, Player, Question } from '../lib/gameService';
 
 interface GameState {
     playerName: string | null;
@@ -6,19 +8,26 @@ interface GameState {
     status: 'idle' | 'waiting' | 'playing' | 'finished';
     score: number;
     rank: number;
-    players: any[];
+    players: Player[];
     currentQuestionIndex: number;
-    items: any[];
+    questions: Question[];
+    currentRoom: Room | null;
+    currentPlayer: Player | null;
 
+    // Actions
     setPlayerName: (name: string) => void;
     setRoomCode: (code: string) => void;
     setStatus: (status: GameState['status']) => void;
-    updateScore: (points: number) => void;
-    setPlayers: (players: any[]) => void;
+
+    // Async Actions
+    joinRoom: (roomCode: string, playerName: string) => Promise<void>;
+    submitAnswer: (isCorrect: boolean, timeUsed: number) => Promise<void>;
+    setPlayers: (players: Player[]) => void;
     setCurrentQuestionIndex: (index: number) => void;
+    startRoom: () => Promise<void>;
 }
 
-export const useGameStore = create<GameState>((set) => ({
+export const useGameStore = create<GameState>((set, get) => ({
     playerName: null,
     roomCode: null,
     status: 'idle',
@@ -26,12 +35,84 @@ export const useGameStore = create<GameState>((set) => ({
     rank: 0,
     players: [],
     currentQuestionIndex: 0,
-    items: [],
+    questions: [],
+    currentRoom: null,
+    currentPlayer: null,
 
     setPlayerName: (name) => set({ playerName: name }),
     setRoomCode: (code) => set({ roomCode: code }),
     setStatus: (status) => set({ status }),
-    updateScore: (points) => set((state) => ({ score: state.score + points })),
+
+    joinRoom: async (roomCode, playerName) => {
+        try {
+            const { room, player } = await gameService.joinRoom(roomCode, playerName);
+            const questions = await gameService.getQuestions();
+
+            set({
+                currentRoom: room,
+                currentPlayer: player,
+                roomCode,
+                playerName,
+                questions,
+                status: room.status,
+                score: player.score
+            });
+
+            // Subscribe to room updates
+            gameService.subscribeToRoom(room.id, (updatedRoom) => {
+                set({
+                    currentRoom: updatedRoom,
+                    status: updatedRoom.status,
+                    currentQuestionIndex: updatedRoom.current_question_index
+                });
+            });
+
+            // Subscribe to players
+            gameService.subscribeToPlayers(room.id, (players) => {
+                const rank = players.findIndex(p => p.id === player.id) + 1;
+                set({ players, rank });
+            });
+
+        } catch (error) {
+            console.error('Join room error:', error);
+            throw error;
+        }
+    },
+
+    submitAnswer: async (isCorrect, timeUsed) => {
+        const { currentPlayer, questions, currentQuestionIndex } = get();
+        if (!currentPlayer || questions.length === 0) return;
+
+        const question = questions[currentQuestionIndex];
+
+        // Simple scoring logic: 100 base + time bonus (up to 100)
+        let points = 0;
+        if (isCorrect) {
+            const timeBonus = Math.max(0, 100 - Math.floor(timeUsed / 100));
+            points = 100 + timeBonus;
+        }
+
+        try {
+            const newTotalScore = await gameService.submitAnswer(
+                currentPlayer.id,
+                question.id,
+                isCorrect,
+                timeUsed,
+                points
+            );
+            set({ score: newTotalScore });
+        } catch (error) {
+            console.error('Submit answer error:', error);
+        }
+    },
+
     setPlayers: (players) => set({ players }),
     setCurrentQuestionIndex: (index) => set({ currentQuestionIndex: index }),
+
+    startRoom: async () => {
+        const { currentRoom } = get();
+        if (currentRoom) {
+            await gameService.updateRoomStatus(currentRoom.id, 'playing');
+        }
+    }
 }));
