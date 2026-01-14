@@ -1,68 +1,90 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,700;1,400&display=swap');
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@theme {
+  --color-primary: #991B1B;
+  /* Academic Crimson */
+  --color-primary-light: #B91C1C;
+  --color-secondary: #B45309;
+  /* Deep Amber/Gold */
+  --color-secondary-light: #D97706;
+  --color-neutral-bg: #FDFCF0;
+  /* Academic Paper */
+  --color-neutral-surface: #FFFFFF;
+  --color-neutral-text: #111827;
+  --color-neutral-muted: #4B5563;
+  --color-accent-blue: #1E3A8A;
+  /* Intellectual Blue */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'IBM Plex Serif', serif;
+  --font-academic: 'Crimson Pro', serif;
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  --shadow-premium: 0 10px 30px -10px rgba(153, 27, 27, 0.2);
+  --shadow-gold: 0 10px 30px -10px rgba(180, 83, 9, 0.2);
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  --radius-academic: 2px;
+  /* Constructivist sharp edges mixed with subtle rounds */
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base {
+  body {
+    @apply text-neutral-text antialiased min-h-screen bg-neutral-bg;
+    font-family: var(--font-sans);
+    background-image:
+      linear-gradient(rgba(153, 27, 27, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(153, 27, 27, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
-  a:hover {
-    color: #747bff;
+
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight font-bold;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-3 border-b-4 border-primary-light font-bold transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0 active:border-b-0 cursor-pointer uppercase tracking-widest text-sm flex items-center justify-center gap-2;
   }
+
+  .btn-secondary {
+    @apply bg-white text-primary border-2 border-primary px-6 py-3 font-bold transition-all duration-200 hover:bg-primary/5 active:scale-95 cursor-pointer uppercase tracking-widest text-sm flex items-center justify-center gap-2;
+  }
+
+  .glass-card {
+    @apply bg-white border-2 border-neutral-text/10 shadow-[8px_8px_0px_0px_rgba(153, 27, 27, 0.1)] p-8;
+  }
+
+  .constructivist-box {
+    @apply relative border-l-4 border-primary pl-6 py-4 bg-white shadow-sm;
+  }
+
+  .input-field {
+    @apply w-full px-5 py-4 bg-neutral-bg border-2 border-neutral-text/10 focus:outline-none focus:border-primary transition-colors font-medium;
+  }
+
+  .academic-label {
+    @apply text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-1 block;
+  }
+
+  .pattern-dots {
+    background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+}
+
+@keyframes scan {
+  from {
+    transform: translateY(-100%);
+  }
+
+  to {
+    transform: translateY(1000%);
+  }
+}
+
+.animate-scan {
+  animation: scan 10s linear infinite;
 }
