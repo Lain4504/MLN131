@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS players (
     name TEXT NOT NULL,
     score INT DEFAULT 0,
     is_admin BOOLEAN DEFAULT FALSE,
+    item_inventory JSONB DEFAULT '{"score_boost":0,"time_extend":0,"shield":0,"confusion":0,"time_attack":0}'::jsonb,
     last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

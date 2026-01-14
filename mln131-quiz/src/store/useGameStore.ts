@@ -13,6 +13,8 @@ interface GameState {
     questions: Question[];
     currentRoom: Room | null;
     currentPlayer: Player | null;
+    itemInventory: Record<string, number>;
+    lastRewardedItem: string | null;
 
     // Actions
     setPlayerName: (name: string) => void;
@@ -32,12 +34,20 @@ export const useGameStore = create<GameState>((set, get) => ({
     roomCode: null,
     status: 'idle',
     score: 0,
-    rank: 0,
+    rank: 1,
     players: [],
     currentQuestionIndex: 0,
     questions: [],
     currentRoom: null,
     currentPlayer: null,
+    itemInventory: {
+        score_boost: 0,
+        time_extend: 0,
+        shield: 0,
+        confusion: 0,
+        time_attack: 0
+    },
+    lastRewardedItem: null,
 
     setPlayerName: (name) => set({ playerName: name }),
     setRoomCode: (code) => set({ roomCode: code }),
@@ -93,14 +103,19 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         try {
-            const newTotalScore = await gameService.submitAnswer(
+            const result = await gameService.submitAnswer(
                 currentPlayer.id,
                 question.id,
                 isCorrect,
                 timeUsed,
                 points
             );
-            set({ score: newTotalScore });
+
+            set({
+                score: result.newScore,
+                itemInventory: result.newInventory,
+                lastRewardedItem: result.rewardedItem
+            });
         } catch (error) {
             console.error('Submit answer error:', error);
         }

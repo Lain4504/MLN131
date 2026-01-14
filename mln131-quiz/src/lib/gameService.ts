@@ -112,7 +112,7 @@ export const gameService = {
         // 2. Update player total score
         const { data: player, error: fetchError } = await supabase
             .from('players')
-            .select('score')
+            .select('score, item_inventory')
             .eq('id', playerId)
             .single();
 
@@ -120,13 +120,92 @@ export const gameService = {
 
         const newScore = (player?.score || 0) + points;
 
+        // 3. Reward random item if answer is correct
+        let newInventory = player?.item_inventory || {
+            score_boost: 0,
+            time_extend: 0,
+            shield: 0,
+            confusion: 0,
+            time_attack: 0
+        };
+
+        let rewardedItem: string | null = null;
+
+        if (isCorrect) {
+            const itemTypes = ['score_boost', 'time_extend', 'shield', 'confusion', 'time_attack'];
+            rewardedItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+            newInventory = {
+                ...newInventory,
+                [rewardedItem]: (newInventory[rewardedItem] || 0) + 1
+            };
+        }
+
         const { error: scoreError } = await supabase
             .from('players')
-            .update({ score: newScore })
+            .update({
+                score: newScore,
+                item_inventory: newInventory
+            })
             .eq('id', playerId);
 
         if (scoreError) throw scoreError;
-        return newScore;
+
+        return {
+            newScore,
+            newInventory,
+            rewardedItem
+        };
+    },
+
+    // Item Management
+    async getPlayerInventory(playerId: string) {
+        const { data, error } = await supabase
+            .from('players')
+            .select('item_inventory')
+            .eq('id', playerId)
+            .single();
+
+        if (error) throw error;
+        return data?.item_inventory || {
+            score_boost: 0,
+            time_extend: 0,
+            shield: 0,
+            confusion: 0,
+            time_attack: 0
+        };
+    },
+
+    async consumeItem(playerId: string, itemType: string) {
+        // Get current inventory
+        const { data: player, error: fetchError } = await supabase
+            .from('players')
+            .select('item_inventory')
+            .eq('id', playerId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const inventory = player?.item_inventory || {};
+        const currentCount = inventory[itemType] || 0;
+
+        if (currentCount <= 0) {
+            throw new Error(`Không còn ${itemType} trong kho`);
+        }
+
+        // Decrease item count
+        const newInventory = {
+            ...inventory,
+            [itemType]: currentCount - 1
+        };
+
+        const { error: updateError } = await supabase
+            .from('players')
+            .update({ item_inventory: newInventory })
+            .eq('id', playerId);
+
+        if (updateError) throw updateError;
+
+        return newInventory;
     },
 
     async useItem(fromPlayerId: string, toPlayerId: string, itemType: string, questionIndex: number) {

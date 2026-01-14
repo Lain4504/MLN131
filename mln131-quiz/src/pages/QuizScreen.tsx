@@ -13,7 +13,9 @@ export const QuizScreen: React.FC = () => {
         players,
         rank,
         submitAnswer,
-        currentRoom
+        currentRoom,
+        itemInventory,
+        lastRewardedItem
     } = useGameStore();
 
     const [timeLeft, setTimeLeft] = useState(30);
@@ -22,6 +24,7 @@ export const QuizScreen: React.FC = () => {
     const [showTargeting, setShowTargeting] = useState(false);
     const [activeDebuffs, setActiveDebuffs] = useState<string[]>([]); // Track active debuffs
     const [timeBonus, setTimeBonus] = useState(0); // Extra time from items
+    const [showRewardNotification, setShowRewardNotification] = useState(false);
 
     const question = questions[currentQuestionIndex] || {
         content: {
@@ -65,6 +68,14 @@ export const QuizScreen: React.FC = () => {
         };
     }, [currentPlayer?.id]);
 
+    // Show reward notification when receiving item
+    useEffect(() => {
+        if (lastRewardedItem) {
+            setShowRewardNotification(true);
+            setTimeout(() => setShowRewardNotification(false), 3000);
+        }
+    }, [lastRewardedItem]);
+
     useEffect(() => {
         if (timeLeft > 0) {
             const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -90,6 +101,13 @@ export const QuizScreen: React.FC = () => {
     const handleItemClick = async (label: string, type: string, color: 'yellow' | 'red') => {
         if (!currentPlayer || !currentRoom) return;
 
+        // Check if player has this item
+        const itemCount = itemInventory[type] || 0;
+        if (itemCount <= 0) {
+            alert(`Bạn không còn ${label}!`);
+            return;
+        }
+
         if (color === 'red') {
             // Debuff - need to select target
             setShowTargeting(true);
@@ -99,6 +117,9 @@ export const QuizScreen: React.FC = () => {
             setActiveItem({ label, color, type });
 
             try {
+                // Consume item first
+                await gameService.consumeItem(currentPlayer.id, type);
+
                 await gameService.useItem(
                     currentPlayer.id,
                     currentPlayer.id, // Self-target for buffs
@@ -115,9 +136,9 @@ export const QuizScreen: React.FC = () => {
                 }
 
                 setTimeout(() => setActiveItem(null), 2000);
-            } catch (err) {
+            } catch (err: any) {
                 console.error('Use item error:', err);
-                alert('Không thể sử dụng vật phẩm');
+                alert(err.message || 'Không thể sử dụng vật phẩm');
             }
         }
     };
@@ -125,10 +146,22 @@ export const QuizScreen: React.FC = () => {
     const confirmTarget = async (targetPlayerId: string, targetName: string) => {
         if (!currentPlayer || !activeItem?.type) return;
 
+        // Check if player has this item
+        const itemCount = itemInventory[activeItem.type] || 0;
+        if (itemCount <= 0) {
+            alert(`Bạn không còn ${activeItem.label}!`);
+            setShowTargeting(false);
+            setActiveItem(null);
+            return;
+        }
+
         setShowTargeting(false);
         setActiveItem({ label: `Đang dùng ${activeItem.label} lên ${targetName}`, color: 'red', type: activeItem.type });
 
         try {
+            // Consume item first
+            await gameService.consumeItem(currentPlayer.id, activeItem.type);
+
             await gameService.useItem(
                 currentPlayer.id,
                 targetPlayerId,
@@ -137,9 +170,9 @@ export const QuizScreen: React.FC = () => {
             );
 
             setTimeout(() => setActiveItem(null), 3000);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Use item error:', err);
-            alert('Không thể sử dụng vật phẩm');
+            alert(err.message || 'Không thể sử dụng vật phẩm');
         }
     };
 
@@ -251,12 +284,12 @@ export const QuizScreen: React.FC = () => {
                     <footer className="px-4 lg:px-8 py-3 lg:py-4 border-t-2 border-neutral-text/5 bg-white/50 backdrop-blur-sm flex-shrink-0">
                         <div className="flex items-center gap-3 lg:gap-4 overflow-x-auto">
                             <span className="text-[9px] font-black text-neutral-text/40 uppercase tracking-wider flex-shrink-0 hidden sm:block">Vật phẩm:</span>
-                            <ItemButton icon={<Sparkles size={16} />} label="Gia tăng" color="yellow" onClick={() => handleItemClick('Gia tăng Điểm', 'score_boost', 'yellow')} />
-                            <ItemButton icon={<Timer size={16} />} label="Hãn chế" color="yellow" onClick={() => handleItemClick('Kéo dài Thời gian', 'time_extend', 'yellow')} />
-                            <ItemButton icon={<Shield size={16} />} label="Miễn dịch" color="yellow" onClick={() => handleItemClick('Khiên Miễn dịch', 'shield', 'yellow')} />
+                            <ItemButton icon={<Sparkles size={16} />} label="Gia tăng" color="yellow" count={itemInventory.score_boost} onClick={() => handleItemClick('Gia tăng Điểm', 'score_boost', 'yellow')} />
+                            <ItemButton icon={<Timer size={16} />} label="Hãn chế" color="yellow" count={itemInventory.time_extend} onClick={() => handleItemClick('Kéo dài Thời gian', 'time_extend', 'yellow')} />
+                            <ItemButton icon={<Shield size={16} />} label="Miễn dịch" color="yellow" count={itemInventory.shield} onClick={() => handleItemClick('Khiên Miễn dịch', 'shield', 'yellow')} />
                             <div className="w-px h-8 bg-neutral-text/10" />
-                            <ItemButton icon={<Ghost size={16} />} label="Gây nhiễu" color="red" onClick={() => handleItemClick('Nhiễu loạn Phương án', 'confusion', 'red')} />
-                            <ItemButton icon={<Zap size={16} />} label="Công kích" color="red" onClick={() => handleItemClick('Công kích Thời gian', 'time_attack', 'red')} />
+                            <ItemButton icon={<Ghost size={16} />} label="Gây nhiễu" color="red" count={itemInventory.confusion} onClick={() => handleItemClick('Nhiễu loạn Phương án', 'confusion', 'red')} />
+                            <ItemButton icon={<Zap size={16} />} label="Công kích" color="red" count={itemInventory.time_attack} onClick={() => handleItemClick('Công kích Thời gian', 'time_attack', 'red')} />
                         </div>
                     </footer>
                 </div>
@@ -378,18 +411,54 @@ export const QuizScreen: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Reward Notification */}
+            <AnimatePresence>
+                {showRewardNotification && lastRewardedItem && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 50 }}
+                        className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gradient-to-r from-secondary to-primary text-white px-8 py-4 shadow-2xl z-50 border-2 border-white/20"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/20 flex items-center justify-center animate-bounce">
+                                <Sparkles size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider opacity-80">Phần thưởng!</p>
+                                <p className="font-black text-lg uppercase tracking-tight">+1 {lastRewardedItem.replace('_', ' ')}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
 
-const ItemButton: React.FC<{ icon: React.ReactNode, label: string, color: 'yellow' | 'red', onClick?: () => void }> = ({ icon, label, color, onClick }) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-1 lg:gap-2 group cursor-pointer relative flex-shrink-0">
-        <div className={`w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center transition-all duration-300 border-2 shadow-sm ${color === 'yellow'
-            ? 'bg-neutral-bg text-secondary border-secondary/20 hover:bg-secondary hover:text-white hover:border-secondary hover:shadow-secondary/20 hover:shadow-lg'
-            : 'bg-neutral-bg text-primary border-primary/20 hover:bg-primary hover:text-white hover:border-primary hover:shadow-primary/20 hover:shadow-lg'
-            }`}>
-            {icon}
-        </div>
-        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-wider text-neutral-muted group-hover:text-primary transition-colors whitespace-nowrap">{label}</span>
-    </button>
-);
+const ItemButton: React.FC<{ icon: React.ReactNode, label: string, color: 'yellow' | 'red', count?: number, onClick?: () => void }> = ({ icon, label, color, count = 0, onClick }) => {
+    const isDisabled = count <= 0;
+
+    return (
+        <button
+            onClick={onClick}
+            disabled={isDisabled}
+            className={`flex flex-col items-center gap-1 lg:gap-2 group cursor-pointer relative flex-shrink-0 ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+        >
+            <div className={`w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center transition-all duration-300 border-2 shadow-sm relative ${color === 'yellow'
+                ? 'bg-neutral-bg text-secondary border-secondary/20 hover:bg-secondary hover:text-white hover:border-secondary hover:shadow-secondary/20 hover:shadow-lg'
+                : 'bg-neutral-bg text-primary border-primary/20 hover:bg-primary hover:text-white hover:border-primary hover:shadow-primary/20 hover:shadow-lg'
+                } ${isDisabled ? 'grayscale' : ''}`}>
+                {icon}
+                {/* Count Badge */}
+                {count > 0 && (
+                    <div className={`absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-[10px] font-black ${color === 'yellow' ? 'bg-secondary' : 'bg-primary'} text-white rounded-full border-2 border-white shadow-lg`}>
+                        {count}
+                    </div>
+                )}
+            </div>
+            <span className={`text-[8px] lg:text-[9px] font-black uppercase tracking-wider transition-colors whitespace-nowrap ${isDisabled ? 'text-neutral-text/30' : 'text-neutral-muted group-hover:text-primary'}`}>{label}</span>
+        </button>
+    );
+};
