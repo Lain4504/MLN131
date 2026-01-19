@@ -5,7 +5,7 @@ import { useGameStore } from './store/useGameStore';
 function App() {
   return (
     <BrowserRouter>
-      <div className="font-sans">
+      <div className="font-sans relative">
         <AppRoutes />
 
         {/* Dev helper for screen switching */}

@@ -105,9 +105,13 @@ export const AdminDashboard: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-neutral-bg flex">
+        <div className="min-h-screen bg-neutral-bg flex page-transition">
+            {/* Enhanced Background */}
+            <div className="fixed inset-0 animated-gradient-bg opacity-30" />
+            <div className="fixed inset-0 pattern-dots opacity-[0.04] text-primary" />
+            
             {/* Sidebar */}
-            <aside className="w-80 bg-neutral-text text-white flex flex-col">
+            <aside className="w-80 bg-neutral-text text-white flex flex-col relative z-10 glass-morphism-dark">
                 {/* Header */}
                 <div className="p-8 border-b border-white/10">
                     <div className="flex items-center gap-4 mb-2">
@@ -165,7 +169,7 @@ export const AdminDashboard: React.FC = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-8">
+            <main className="flex-1 p-8 relative z-10">
                 {/* Rooms Tab */}
                 {activeTab === 'rooms' && (
                     <div>
@@ -174,7 +178,7 @@ export const AdminDashboard: React.FC = () => {
                                 <h2 className="text-4xl font-black text-neutral-text uppercase tracking-tight">Phòng Chơi</h2>
                                 <p className="text-sm text-neutral-muted font-bold mt-1">Tổng số: {rooms.length} phòng</p>
                             </div>
-                            <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+                            <button onClick={() => setShowCreateModal(true)} className="btn-primary-enhanced">
                                 <Plus size={20} />
                                 <span>Tạo Phòng</span>
                             </button>
@@ -186,7 +190,7 @@ export const AdminDashboard: React.FC = () => {
                                     key={room.id}
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="glass-card p-6 hover:shadow-lg transition-shadow"
+                                    className="premium-card p-6 smooth-hover"
                                 >
                                     <div className="flex items-start justify-between mb-4">
                                         <div>
@@ -242,17 +246,17 @@ export const AdminDashboard: React.FC = () => {
                                 <h2 className="text-4xl font-black text-neutral-text uppercase tracking-tight">Câu Hỏi</h2>
                                 <p className="text-sm text-neutral-muted font-bold mt-1">Quản lý kho câu hỏi</p>
                             </div>
-                            <button onClick={() => navigate('/admin/questions')} className="btn-primary">
+                            <button onClick={() => navigate('/admin/questions')} className="btn-primary-enhanced">
                                 <Database size={20} />
                                 <span>Mở Kho Câu Hỏi</span>
                             </button>
                         </div>
 
-                        <div className="glass-card p-12 text-center">
+                        <div className="premium-card p-12 text-center">
                             <Database size={64} className="mx-auto mb-4 text-primary" />
                             <h3 className="text-2xl font-black text-neutral-text mb-2">Kho Câu Hỏi</h3>
                             <p className="text-neutral-muted mb-6">Click nút bên trên để quản lý câu hỏi</p>
-                            <button onClick={() => navigate('/admin/questions')} className="btn-primary">
+                            <button onClick={() => navigate('/admin/questions')} className="btn-primary-enhanced">
                                 Mở Kho Câu Hỏi
                             </button>
                         </div>
@@ -289,16 +293,16 @@ export const AdminDashboard: React.FC = () => {
                                         value={newRoomCode}
                                         onChange={(e) => setNewRoomCode(e.target.value)}
                                         placeholder="VD: MLN131-DEMO"
-                                        className="input-field"
+                                        className="input-field-enhanced"
                                         required
                                     />
                                     <p className="text-xs text-neutral-muted mt-2">
-                                        * Phòng sẽ tự động sử dụng tất cả câu hỏi trong kho
+                                        * Phòng sẽ tự động sử dụng 15 câu hỏi ngẫu nhiên trong kho
                                     </p>
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <button type="submit" disabled={loading} className="btn-primary flex-1">
+                                    <button type="submit" disabled={loading} className="btn-primary-enhanced flex-1">
                                         <Plus size={20} />
                                         <span>{loading ? 'Đang tạo...' : 'Tạo Phòng'}</span>
                                     </button>

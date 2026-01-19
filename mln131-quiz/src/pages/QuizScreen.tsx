@@ -27,6 +27,9 @@ export const QuizScreen: React.FC = () => {
     const [timeBonus, setTimeBonus] = useState(0);
     const [showRewardNotification, setShowRewardNotification] = useState(false);
     const [itemQueue, setItemQueue] = useState<any[]>([]);
+    const [hasSubmitted, setHasSubmitted] = useState(false);
+    const [timeOutNotification, setTimeOutNotification] = useState(false);
+    const [confusionMapping, setConfusionMapping] = useState<number[] | null>(null); // Map original index to shuffled index
 
     const question = questions[currentQuestionIndex] || {
         content: {
@@ -36,6 +39,76 @@ export const QuizScreen: React.FC = () => {
             difficulty: "Bình thường"
         }
     };
+
+    // Apply confusion effect - shuffle options but keep correct_index
+    const getDisplayOptions = () => {
+        if (activeDebuffs.includes('confusion') && confusionMapping) {
+            // Use shuffled order
+            return confusionMapping.map(originalIndex => question.content.options[originalIndex]);
+        }
+        return question.content.options;
+    };
+
+    // Get the original index from display index (for answer checking)
+    const getOriginalIndex = (displayIndex: number): number => {
+        if (activeDebuffs.includes('confusion') && confusionMapping) {
+            return confusionMapping[displayIndex];
+        }
+        return displayIndex;
+    };
+
+
+    // Subscribe to room updates to sync currentQuestionIndex when admin changes question
+    useEffect(() => {
+        if (!currentRoom?.id) {
+            return;
+        }
+
+        console.log('QuizScreen: Setting up room subscription for room:', currentRoom.id);
+
+        const channel = gameService.subscribeToRoom(currentRoom.id, (updatedRoom) => {
+            const newIndex = updatedRoom.current_question_index || 0;
+            const currentStoreIndex = useGameStore.getState().currentQuestionIndex;
+            
+            console.log('QuizScreen: Room updated via subscription!', {
+                roomId: updatedRoom.id,
+                status: updatedRoom.status,
+                newQuestionIndex: newIndex,
+                currentStoreIndex: currentStoreIndex
+            });
+            
+            // Always update store if index changed
+            if (newIndex !== currentStoreIndex) {
+                console.log('QuizScreen: Updating store question index from', currentStoreIndex, 'to', newIndex);
+                useGameStore.getState().setCurrentQuestionIndex(newIndex);
+            }
+        });
+
+        // Fallback: Poll room state every 2 seconds as backup
+        const pollInterval = setInterval(async () => {
+            try {
+                const rooms = await gameService.getRooms();
+                const currentRoomData = rooms.find(r => r.id === currentRoom.id);
+                if (currentRoomData) {
+                    const newIndex = currentRoomData.current_question_index || 0;
+                    const currentStoreIndex = useGameStore.getState().currentQuestionIndex;
+                    
+                    if (newIndex !== currentStoreIndex) {
+                        console.log('QuizScreen: Poll detected question index change from', currentStoreIndex, 'to', newIndex);
+                        useGameStore.getState().setCurrentQuestionIndex(newIndex);
+                    }
+                }
+            } catch (err) {
+                console.error('QuizScreen: Poll error', err);
+            }
+        }, 2000);
+
+        return () => {
+            console.log('QuizScreen: Cleaning up room subscription and poll');
+            channel.unsubscribe();
+            clearInterval(pollInterval);
+        };
+    }, [currentRoom?.id]);
 
     // Subscribe to items used on this player with AUTO-SHIELD
     useEffect(() => {
@@ -52,6 +125,9 @@ export const QuizScreen: React.FC = () => {
                 try {
                     // Auto-consume shield to block attack
                     await gameService.consumeItem(currentPlayer.id, 'shield');
+
+                    // Update local inventory state
+                    updateItemInventory('shield', -1);
 
                     // Show shield block notification
                     setActiveItem({
@@ -121,6 +197,10 @@ export const QuizScreen: React.FC = () => {
             setTimeout(() => {
                 setItemQueue(prev => prev.slice(1));
                 setActiveDebuffs(prev => prev.filter(d => d !== item.item_type));
+                // Clear confusion mapping when confusion ends
+                if (item.item_type === 'confusion') {
+                    setConfusionMapping(null);
+                }
             }, 3000);
         };
 
@@ -135,26 +215,61 @@ export const QuizScreen: React.FC = () => {
         }
     }, [lastRewardedItem]);
 
+    // Timer countdown - auto submit when time runs out
     useEffect(() => {
+        if (hasSubmitted || selectedOption !== null) return; // Stop timer if already submitted or answered
+        
         if (timeLeft > 0) {
-            const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+            const timer = setTimeout(() => {
+                setTimeLeft(prev => prev - 1);
+            }, 1000);
             return () => clearTimeout(timer);
-        } else if (selectedOption === null) {
+        } else if (timeLeft === 0 && !hasSubmitted && selectedOption === null) {
+            // Auto submit when time runs out (only once)
+            setTimeOutNotification(true);
+            setTimeout(() => setTimeOutNotification(false), 3000);
             handleAnswer(null);
         }
-    }, [timeLeft]);
+    }, [timeLeft, hasSubmitted, selectedOption]);
 
+    // Reset state when question changes
     useEffect(() => {
-        setTimeLeft(30 + timeBonus);
+        console.log('Question changed to index:', currentQuestionIndex);
+        const baseTime = 30;
+        setTimeLeft(baseTime + timeBonus);
         setSelectedOption(null);
         setTimeBonus(0); // Reset time bonus for new question
+        setHasSubmitted(false); // Reset submission flag for new question
+        setActiveDebuffs([]); // Clear debuffs for new question
+        setItemQueue([]); // Clear item queue for new question
+        setTimeOutNotification(false); // Clear timeout notification
+        setActiveItem(null); // Clear active item notification
+        setConfusionMapping(null); // Clear confusion mapping for new question
     }, [currentQuestionIndex]);
 
     const handleAnswer = async (index: number | null) => {
+        // Prevent multiple submissions for the same question
+        if (hasSubmitted) {
+            console.log('Answer already submitted for this question');
+            return;
+        }
+
+        setHasSubmitted(true);
         setSelectedOption(index);
-        const isCorrect = index === question.content.correct_index;
-        const timeUsed = (30 - timeLeft) * 1000;
-        await submitAnswer(isCorrect, timeUsed);
+        
+        // Map display index back to original index for checking
+        const originalIndex = index !== null ? getOriginalIndex(index) : null;
+        const isCorrect = originalIndex !== null && originalIndex === question.content.correct_index;
+        const timeUsed = (30 + timeBonus - timeLeft) * 1000;
+        
+        try {
+            await submitAnswer(isCorrect, timeUsed);
+        } catch (error) {
+            console.error('Submit answer error:', error);
+            // Reset on error so user can try again
+            setHasSubmitted(false);
+            setSelectedOption(null);
+        }
     };
 
     const handleItemClick = async (label: string, type: string, color: 'yellow' | 'red') => {
@@ -195,6 +310,25 @@ export const QuizScreen: React.FC = () => {
                     setTimeBonus(5);
                 } else if (type === 'shield') {
                     setActiveDebuffs([]); // Clear all debuffs
+                    setConfusionMapping(null); // Clear confusion mapping
+                } else if (type === 'score_boost') {
+                    // Add 50 points immediately
+                    if (currentPlayer) {
+                        try {
+                            const currentScore = useGameStore.getState().score;
+                            const newScore = currentScore + 50;
+                            await gameService.updatePlayerScore(currentPlayer.id, newScore);
+                            useGameStore.setState({ score: newScore });
+                            setActiveItem({ 
+                                label: '+50 điểm!', 
+                                color: 'yellow', 
+                                type: 'score_boost' 
+                            });
+                        } catch (err) {
+                            console.error('Score boost error:', err);
+                            alert('Không thể tăng điểm');
+                        }
+                    }
                 }
 
                 setTimeout(() => setActiveItem(null), 2000);
@@ -242,13 +376,18 @@ export const QuizScreen: React.FC = () => {
     };
 
     return (
-        <div className="h-screen bg-neutral-bg relative overflow-hidden flex flex-col perspective-3d">
-            <div className="absolute inset-0 pattern-dots opacity-[0.06] text-primary" />
+        <div className="h-screen relative overflow-hidden flex flex-col perspective-3d page-transition" style={{ backgroundColor: 'transparent' }}>
+            {/* Enhanced Background */}
+            <div className="absolute inset-0 animated-gradient-bg" />
+            <div className="absolute inset-0 pattern-dots opacity-[0.1] text-primary" />
+            <div className="star-field" />
             
-            {/* Vietnam Flag Pattern Background */}
-            <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{
-                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(255,205,0,0.08) 40px, rgba(255,205,0,0.08) 41px)`,
-                backgroundSize: '80px 80px'
+            {/* Enhanced Vietnam Flag Pattern Background */}
+            <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{
+                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(255,205,0,0.12) 40px, rgba(255,205,0,0.12) 41px),
+                                 repeating-linear-gradient(-45deg, transparent, transparent 50px, rgba(220,20,60,0.06) 50px, rgba(220,20,60,0.06) 51px)`,
+                backgroundSize: '80px 80px, 100px 100px',
+                animation: 'gradientShift 25s ease infinite'
             }} />
 
             <div className="absolute -bottom-20 -left-20 w-96 h-96 opacity-[0.04] pointer-events-none grayscale contrast-125 rotate-12 hidden lg:block rotate-3d-hover">
@@ -258,10 +397,10 @@ export const QuizScreen: React.FC = () => {
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10">
                 {/* Main Content */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* 3D Pixel Header */}
-                    <header className="flex justify-between items-center px-4 lg:px-8 py-3 lg:py-4 bg-white/90 backdrop-blur-sm flex-shrink-0 relative pixel-border-red" style={{
+                    {/* Premium Header with Glass Morphism */}
+                    <header className="flex justify-between items-center px-4 lg:px-8 py-3 lg:py-4 glass-morphism flex-shrink-0 relative pixel-border-red" style={{
                         borderBottom: '4px solid #DC143C',
-                        boxShadow: '0 6px 0 #C8102E, 0 12px 0 rgba(200, 16, 46, 0.2)',
+                        boxShadow: '0 6px 0 #C8102E, 0 12px 0 rgba(200, 16, 46, 0.2), 0 0 40px rgba(220, 20, 60, 0.15)',
                         transform: 'perspective(1000px) rotateX(0deg)'
                     }}>
                         <div className="flex gap-4 lg:gap-8 items-center">
@@ -324,20 +463,20 @@ export const QuizScreen: React.FC = () => {
                                     {timeLeft}s
                                 </span>
                             </div>
-                            {/* 3D Pixel Progress Bar */}
-                            <div className="w-full h-3 bg-neutral-text/5 relative overflow-hidden pixel-border-red" style={{
-                                border: '2px solid #DC143C',
-                                boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.1)'
-                            }}>
+                            {/* Premium Progress Bar */}
+                            <div className="progress-bar-premium">
                                 <motion.div
-                                    className={`h-full ${timeLeft < 10 ? 'bg-primary' : 'bg-secondary'} transition-colors`}
+                                    className={`progress-fill-premium ${timeLeft < 10 ? 'gradient-glow-red' : 'gradient-glow-yellow'}`}
                                     initial={{ width: '100%' }}
                                     animate={{ width: `${(timeLeft / 30) * 100}%` }}
                                     transition={{ duration: 1, ease: "linear" }}
                                     style={{
+                                        background: timeLeft < 10 
+                                            ? 'linear-gradient(135deg, #DC143C 0%, #E63950 50%, #FF1744 100%)'
+                                            : 'linear-gradient(135deg, #FFCD00 0%, #FFD700 50%, #FFEB3B 100%)',
                                         boxShadow: timeLeft < 10 
-                                            ? 'inset 0 -2px 0 #C8102E, 0 2px 0 rgba(255,255,255,0.3)' 
-                                            : 'inset 0 -2px 0 #FFB700, 0 2px 0 rgba(255,255,255,0.3)'
+                                            ? 'inset 0 -3px 0 #C8102E, 0 3px 0 rgba(255,255,255,0.3), 0 0 20px rgba(220, 20, 60, 0.4)'
+                                            : 'inset 0 -3px 0 #FFB700, 0 3px 0 rgba(255,255,255,0.3), 0 0 20px rgba(255, 205, 0, 0.4)'
                                     }}
                                 />
                             </div>
@@ -371,26 +510,29 @@ export const QuizScreen: React.FC = () => {
                         </motion.div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4">
-                            {question.content.options.map((option: string, index: number) => (
+                            {getDisplayOptions().map((option: string, displayIndex: number) => {
+                                return (
                                 <motion.button
-                                    key={index}
+                                    key={displayIndex}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    onClick={() => handleAnswer(index)}
-                                    disabled={selectedOption !== null}
-                                    className={`text-left p-4 lg:p-5 transition-all duration-300 group relative ${selectedOption === index
-                                        ? 'pixel-border-red bg-primary/[0.05] -translate-y-1'
+                                    transition={{ delay: displayIndex * 0.05 }}
+                                    onClick={() => handleAnswer(displayIndex)}
+                                    disabled={selectedOption !== null || hasSubmitted}
+                                    className={`text-left p-4 lg:p-5 transition-all duration-300 group relative smooth-hover ${selectedOption === displayIndex
+                                        ? 'pixel-border-red bg-primary/[0.08] -translate-y-1 animated-border'
                                         : 'pixel-border-red bg-white hover:-translate-y-0.5'
-                                        } ${selectedOption !== null && selectedOption !== index ? 'opacity-40 grayscale' : ''}`}
-                                    style={selectedOption === index ? {
+                                        } ${selectedOption !== null && selectedOption !== displayIndex ? 'opacity-40 grayscale' : ''}`}
+                                    style={selectedOption === displayIndex ? {
                                         border: '3px solid #DC143C',
-                                        boxShadow: '0 6px 0 #C8102E, 0 12px 0 rgba(200, 16, 46, 0.4)',
-                                        transform: 'perspective(500px) rotateX(5deg) translateY(-4px)'
+                                        boxShadow: '0 6px 0 #C8102E, 0 12px 0 rgba(200, 16, 46, 0.4), 0 0 30px rgba(220, 20, 60, 0.3)',
+                                        transform: 'perspective(500px) rotateX(5deg) translateY(-4px)',
+                                        background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.1) 0%, rgba(255, 248, 225, 0.3) 100%)'
                                     } : {
                                         border: '3px solid #DC143C',
-                                        boxShadow: '0 4px 0 #C8102E',
-                                        transform: 'perspective(500px) rotateX(0deg)'
+                                        boxShadow: '0 4px 0 #C8102E, 0 0 15px rgba(220, 20, 60, 0.1)',
+                                        transform: 'perspective(500px) rotateX(0deg)',
+                                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 248, 225, 0.5) 100%)'
                                     }}
                                     onMouseEnter={(e) => {
                                         if (selectedOption === null) {
@@ -399,18 +541,18 @@ export const QuizScreen: React.FC = () => {
                                         }
                                     }}
                                     onMouseLeave={(e) => {
-                                        if (selectedOption !== index) {
+                                        if (selectedOption !== displayIndex) {
                                             e.currentTarget.style.transform = 'perspective(500px) rotateX(0deg)';
                                             e.currentTarget.style.boxShadow = '0 4px 0 #C8102E';
                                         }
                                     }}
                                 >
                                     <div className="flex gap-3 lg:gap-4 items-start relative z-10">
-                                        <span className={`w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center font-black text-xs lg:text-sm transition-all flex-shrink-0 pixel-border-red ${selectedOption === index
+                                        <span className={`w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center font-black text-xs lg:text-sm transition-all flex-shrink-0 pixel-border-red ${selectedOption === displayIndex
                                             ? 'bg-primary text-white'
                                             : 'bg-neutral-text/5 text-neutral-text/40 group-hover:bg-primary/10 group-hover:text-primary'
                                             }`}
-                                            style={selectedOption === index ? {
+                                            style={selectedOption === displayIndex ? {
                                                 border: '2px solid #C8102E',
                                                 boxShadow: '0 3px 0 #A00E25, inset 0 -2px 0 rgba(0,0,0,0.2)',
                                                 transform: 'scale(1.1)'
@@ -419,20 +561,35 @@ export const QuizScreen: React.FC = () => {
                                                 boxShadow: '0 2px 0 #C8102E'
                                             }}
                                         >
-                                            {String.fromCharCode(65 + index)}
+                                            {String.fromCharCode(65 + displayIndex)}
                                         </span>
-                                        <span className={`font-bold text-sm lg:text-lg leading-snug pt-0.5 transition-colors ${selectedOption === index ? 'text-primary' : 'text-neutral-text group-hover:text-primary'}`}>
+                                        <span className={`font-bold text-sm lg:text-lg leading-snug pt-0.5 transition-colors ${selectedOption === displayIndex ? 'text-primary' : 'text-neutral-text group-hover:text-primary'}`}>
                                             {option}
                                         </span>
                                     </div>
-                                    <div className={`absolute top-0 right-0 w-2 h-full bg-primary transition-transform origin-right duration-300 ${selectedOption === index ? 'scale-x-100' : 'scale-x-0'}`} />
+                                    <div className={`absolute top-0 right-0 w-2 h-full bg-primary transition-transform origin-right duration-300 ${selectedOption === displayIndex ? 'scale-x-100' : 'scale-x-0'}`} />
                                 </motion.button>
-                            ))}
+                                );
+                            })}
                         </div>
+                        
+                        {/* Confusion indicator */}
+                        {activeDebuffs.includes('confusion') && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="mt-4 p-3 bg-red-50 border-2 border-red-200 flex items-center gap-2"
+                            >
+                                <Ghost size={20} className="text-red-600" />
+                                <span className="text-sm font-bold text-red-800">
+                                    ⚠️ Bạn đang bị nhiễu loạn! Thứ tự đáp án đã bị đảo lộn.
+                                </span>
+                            </motion.div>
+                        )}
                     </main>
 
-                    {/* Compact Footer */}
-                    <footer className="px-4 lg:px-8 py-3 lg:py-4 border-t-2 border-neutral-text/5 bg-white/50 backdrop-blur-sm flex-shrink-0">
+                    {/* Premium Footer */}
+                    <footer className="px-4 lg:px-8 py-3 lg:py-4 border-t-2 border-neutral-text/5 glass-morphism flex-shrink-0">
                         <div className="flex items-center gap-3 lg:gap-4 overflow-x-auto">
                             <span className="text-[9px] font-black text-neutral-text/40 uppercase tracking-wider flex-shrink-0 hidden sm:block">Vật phẩm:</span>
                             <ItemButton icon={<Sparkles size={16} />} label="Gia tăng" color="yellow" count={itemInventory.score_boost} onClick={() => handleItemClick('Gia tăng Điểm', 'score_boost', 'yellow')} />
@@ -487,6 +644,39 @@ export const QuizScreen: React.FC = () => {
                     </div>
                 </aside>
             </div>
+
+            {/* Time Out Notification */}
+            <AnimatePresence>
+                {timeOutNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -50, scale: 0.8 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -50, scale: 0.8 }}
+                        className="pixel-notification pixel-notification-error fixed top-20 left-1/2 -translate-x-1/2 z-50"
+                        style={{
+                            transform: 'perspective(500px) rotateX(5deg) translateX(-50%)'
+                        }}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 pixel-border-red" style={{
+                                border: '3px solid #DC143C',
+                                backgroundColor: 'rgba(220, 20, 60, 0.1)',
+                                boxShadow: '0 3px 0 #C8102E'
+                            }}>
+                                <Timer size={24} fill="currentColor" />
+                            </div>
+                            <div>
+                                <p className="text-[8px] font-black uppercase tracking-wider opacity-50" style={{ textShadow: '1px 1px 0px rgba(0,0,0,0.1)' }}>
+                                    Hết thời gian
+                                </p>
+                                <p className="font-black text-sm uppercase tracking-tight leading-tight" style={{ textShadow: '1px 1px 0px rgba(0,0,0,0.1)' }}>
+                                    Đã tự động nộp đáp án
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Pixel Item Notification */}
             <AnimatePresence>

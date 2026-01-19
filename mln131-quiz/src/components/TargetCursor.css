@@ -1,0 +1,188 @@
+/* Pixel Art Target Cursor - Vietnam Theme */
+
+.target-cursor-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+
+/* Pixel Dot - Center */
+.target-cursor-dot {
+  width: 8px;
+  height: 8px;
+  background: #DC143C;
+  border: 2px solid #C8102E;
+  box-shadow: 
+    0 2px 0 #A00E25,
+    0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  image-rendering: pixelated;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Pixel Corners - Vietnam Colors */
+.target-cursor-corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #FFCD00;
+  border: 2px solid #FFB700;
+  box-shadow: 
+    0 3px 0 #E6A500,
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  image-rendering: pixelated;
+  will-change: transform;
+  transform-origin: center;
+}
+
+/* Corner positions - Initial (when not hovering) */
+.corner-tl {
+  top: -18px;
+  left: -18px;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.corner-tr {
+  top: -18px;
+  right: -18px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+.corner-br {
+  bottom: -18px;
+  right: -18px;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.corner-bl {
+  bottom: -18px;
+  left: -18px;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+/* Active state - When hovering over target */
+.target-cursor-wrapper:hover .target-cursor-corner,
+.target-cursor-wrapper[data-active="true"] .target-cursor-corner {
+  background: #DC143C;
+  border-color: #C8102E;
+  box-shadow: 
+    0 4px 0 #A00E25,
+    0 8px 0 rgba(168, 14, 37, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Active dot - Enhanced when hovering */
+.target-cursor-wrapper:hover .target-cursor-dot,
+.target-cursor-wrapper[data-active="true"] .target-cursor-dot {
+  width: 10px;
+  height: 10px;
+  background: #FFCD00;
+  border-color: #FFB700;
+  box-shadow: 
+    0 3px 0 #E6A500,
+    0 6px 0 rgba(230, 165, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Spin animation - Pixel-perfect rotation */
+@keyframes pixelRotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.target-cursor-wrapper {
+  animation: pixelRotate 2s linear infinite;
+}
+
+.target-cursor-wrapper[data-spin="false"] {
+  animation: none;
+}
+
+/* Hover states for interactive elements */
+button:hover ~ .target-cursor-wrapper,
+a:hover ~ .target-cursor-wrapper,
+input:hover ~ .target-cursor-wrapper,
+[role="button"]:hover ~ .target-cursor-wrapper {
+  /* This is handled by JS, but we can add CSS fallback */
+}
+
+/* Pixel glow effect on hover */
+.target-cursor-corner::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: currentColor;
+  opacity: 0;
+  filter: blur(4px);
+  transition: opacity 0.3s;
+  z-index: -1;
+  clip-path: inherit;
+}
+
+.target-cursor-wrapper:hover .target-cursor-corner::before,
+.target-cursor-wrapper[data-active="true"] .target-cursor-corner::before {
+  opacity: 0.3;
+}
+
+/* Pressed state */
+.target-cursor-wrapper[data-pressed="true"] {
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+.target-cursor-wrapper[data-pressed="true"] .target-cursor-dot {
+  transform: translate(-50%, -50%) scale(0.7);
+  box-shadow: 
+    0 1px 0 #A00E25,
+    inset 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile - Hide cursor */
+@media (max-width: 768px) {
+  .target-cursor-wrapper {
+    display: none;
+  }
+}
+
+/* Pixel-perfect rendering */
+.target-cursor-wrapper * {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Performance optimizations */
+.target-cursor-wrapper,
+.target-cursor-dot,
+.target-cursor-corner {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Accessibility - Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .target-cursor-wrapper {
+    animation: none;
+  }
+  
+  .target-cursor-corner {
+    transition: none;
+  }
+}

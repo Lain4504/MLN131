@@ -36,6 +36,22 @@ export const QuestionManagement: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validate form data
+        if (!formData.question.trim()) {
+            alert('Vui lòng nhập câu hỏi');
+            return;
+        }
+
+        if (formData.options.some(opt => !opt.trim())) {
+            alert('Vui lòng nhập đầy đủ 4 đáp án');
+            return;
+        }
+
+        if (formData.correct_index < 0 || formData.correct_index > 3) {
+            alert('Vui lòng chọn đáp án đúng');
+            return;
+        }
+
         try {
             if (editingQuestion) {
                 // Update existing question
@@ -51,9 +67,10 @@ export const QuestionManagement: React.FC = () => {
 
             await fetchQuestions();
             handleCloseModal();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Save question error:', err);
-            alert('Có lỗi xảy ra khi lưu câu hỏi');
+            const errorMessage = err?.message || err?.error?.message || 'Có lỗi xảy ra khi lưu câu hỏi';
+            alert(`Lỗi: ${errorMessage}`);
         }
     };
 
@@ -71,7 +88,10 @@ export const QuestionManagement: React.FC = () => {
 
     const handleEdit = (question: Question) => {
         setEditingQuestion(question);
-        setFormData(question.content);
+        setFormData({
+            ...question.content,
+            difficulty: question.content.difficulty as 'Dễ' | 'Bình thường' | 'Khó'
+        });
         setShowModal(true);
     };
 

@@ -88,20 +88,58 @@ export const gameService = {
         return data as Player[];
     },
 
-    async updateRoomStatus(roomId: string, status: Room['status']) {
+    async getPlayer(playerId: string) {
+        const { data, error } = await supabase
+            .from('players')
+            .select('*')
+            .eq('id', playerId)
+            .single();
+        if (error) throw error;
+        return data as Player;
+    },
+
+    async updatePlayerScore(playerId: string, newScore: number) {
         const { error } = await supabase
-            .from('rooms')
-            .update({ status })
-            .eq('id', roomId);
+            .from('players')
+            .update({ score: newScore })
+            .eq('id', playerId);
         if (error) throw error;
     },
 
+    async updateRoomStatus(roomId: string, status: Room['status']) {
+        console.log('gameService.updateRoomStatus: Updating room', roomId, 'status to', status);
+        const { data, error } = await supabase
+            .from('rooms')
+            .update({ status })
+            .eq('id', roomId)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('gameService.updateRoomStatus: Error updating room status', error);
+            throw error;
+        }
+        
+        console.log('gameService.updateRoomStatus: Successfully updated room status', data);
+        return data;
+    },
+
     async advanceQuestion(roomId: string, nextIndex: number) {
-        const { error } = await supabase
+        console.log('gameService.advanceQuestion: Updating room', roomId, 'to question index', nextIndex);
+        const { data, error } = await supabase
             .from('rooms')
             .update({ current_question_index: nextIndex })
-            .eq('id', roomId);
-        if (error) throw error;
+            .eq('id', roomId)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('gameService.advanceQuestion: Error updating room', error);
+            throw error;
+        }
+        
+        console.log('gameService.advanceQuestion: Successfully updated room', data);
+        return data;
     },
 
     // Question Management
@@ -115,12 +153,43 @@ export const gameService = {
     },
 
     async createQuestion(question: { content: any }) {
+        console.log('gameService.createQuestion: Creating question with data:', question);
+        
+        // Validate content structure
+        if (!question.content) {
+            throw new Error('Question content is required');
+        }
+        
+        if (!question.content.question || !question.content.question.trim()) {
+            throw new Error('Question text is required');
+        }
+        
+        if (!Array.isArray(question.content.options) || question.content.options.length !== 4) {
+            throw new Error('Question must have exactly 4 options');
+        }
+        
+        if (question.content.options.some((opt: string) => !opt || !opt.trim())) {
+            throw new Error('All options must be filled');
+        }
+        
+        if (typeof question.content.correct_index !== 'number' || 
+            question.content.correct_index < 0 || 
+            question.content.correct_index > 3) {
+            throw new Error('Correct index must be between 0 and 3');
+        }
+        
         const { data, error } = await supabase
             .from('questions')
             .insert([question])
             .select()
             .single();
-        if (error) throw error;
+            
+        if (error) {
+            console.error('gameService.createQuestion: Supabase error:', error);
+            throw new Error(error.message || 'Failed to create question');
+        }
+        
+        console.log('gameService.createQuestion: Successfully created question:', data);
         return data as Question;
     },
 
@@ -266,7 +335,9 @@ export const gameService = {
     },
 
     subscribeToRoom(roomId: string, onUpdate: (room: Room) => void) {
-        return supabase
+        console.log('gameService.subscribeToRoom: Setting up subscription for room', roomId);
+        
+        const channel = supabase
             .channel(`room:${roomId}`)
             .on('postgres_changes', {
                 event: 'UPDATE',
@@ -274,9 +345,18 @@ export const gameService = {
                 table: 'rooms',
                 filter: `id=eq.${roomId}`
             }, (payload) => {
+                console.log('gameService.subscribeToRoom: Received UPDATE event', {
+                    eventType: payload.eventType,
+                    new: payload.new,
+                    old: payload.old
+                });
                 onUpdate(payload.new as Room);
             })
-            .subscribe();
+            .subscribe((status) => {
+                console.log('gameService.subscribeToRoom: Subscription status', status);
+            });
+        
+        return channel;
     },
 
     subscribeToAllRooms(onUpdate: (payload: any) => void) {

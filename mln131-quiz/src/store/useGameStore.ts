@@ -57,7 +57,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     joinRoom: async (roomCode, playerName) => {
         try {
             const { room, player } = await gameService.joinRoom(roomCode, playerName);
-            const questions = await gameService.getQuestions();
+            const allQuestions = await gameService.getQuestions();
+            // Shuffle dựa trên room ID để đảm bảo cùng room có cùng câu hỏi
+            const seed = room.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const shuffled = [...allQuestions].sort((a, b) => {
+                const hashA = (a.id + seed).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const hashB = (b.id + seed).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                return hashA - hashB;
+            });
+            const questions = shuffled.slice(0, 15);
 
             set({
                 currentRoom: room,
@@ -70,13 +78,46 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
 
             // Subscribe to room updates
-            gameService.subscribeToRoom(room.id, (updatedRoom) => {
+            const roomChannel = gameService.subscribeToRoom(room.id, (updatedRoom) => {
+                const oldIndex = get().currentQuestionIndex;
+                const oldStatus = get().status;
+                const newIndex = updatedRoom.current_question_index || 0;
+                const newStatus = updatedRoom.status;
+                
+                console.log('useGameStore: Room updated via subscription', {
+                    roomId: updatedRoom.id,
+                    status: {
+                        old: oldStatus,
+                        new: newStatus,
+                        changed: oldStatus !== newStatus
+                    },
+                    currentQuestionIndex: {
+                        old: oldIndex,
+                        new: newIndex,
+                        changed: newIndex !== oldIndex
+                    }
+                });
+                
                 set({
                     currentRoom: updatedRoom,
-                    status: updatedRoom.status,
-                    currentQuestionIndex: updatedRoom.current_question_index
+                    status: newStatus,
+                    currentQuestionIndex: newIndex
                 });
+                
+                // Log important changes
+                if (newIndex !== oldIndex) {
+                    console.log('useGameStore: Question index changed from', oldIndex, 'to', newIndex);
+                }
+                if (oldStatus !== newStatus) {
+                    console.log('useGameStore: Status changed from', oldStatus, 'to', newStatus);
+                    if (newStatus === 'finished') {
+                        console.log('useGameStore: Game finished! Status is now finished');
+                    }
+                }
             });
+            
+            // Store channel reference for cleanup if needed
+            console.log('useGameStore: Room subscription channel created', roomChannel);
 
             // Subscribe to players
             gameService.subscribeToPlayers(room.id, (players) => {
