@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Trophy, User, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, User, ArrowRight, Crown, Medal, Award, TrendingUp, Sparkles } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { gameService } from '../lib/gameService';
-import type { Player, Room } from '../lib/gameService';
+import type { Player } from '../lib/gameService';
 
 export const LeaderboardScreen: React.FC = () => {
     const { roomId } = useParams<{ roomId: string }>();
     const navigate = useNavigate();
     const { currentPlayer } = useGameStore();
     const [players, setPlayers] = useState<Player[]>([]);
-    const [room, setRoom] = useState<Room | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -19,11 +18,6 @@ export const LeaderboardScreen: React.FC = () => {
             if (!roomId) return;
 
             try {
-                // Fetch room info
-                const rooms = await gameService.getRooms();
-                const currentRoom = rooms.find(r => r.id === roomId);
-                setRoom(currentRoom || null);
-
                 // Fetch players
                 const roomPlayers = await gameService.getPlayers(roomId);
                 setPlayers(roomPlayers);
@@ -51,7 +45,7 @@ export const LeaderboardScreen: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-neutral-bg relative overflow-hidden perspective-3d">
+            <div className="min-h-screen flex items-center justify-center relative overflow-hidden perspective-3d" style={{ backgroundColor: 'transparent' }}>
                 <div className="pixel-star-bg" />
                 <div className="text-center space-y-6 relative z-10">
                     <div className="pixel-spinner mx-auto mb-4" />
@@ -73,15 +67,32 @@ export const LeaderboardScreen: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen py-16 px-6 flex flex-col items-center max-w-5xl mx-auto relative overflow-hidden bg-neutral-bg perspective-3d">
-            <div className="absolute inset-0 pattern-dots opacity-[0.04] text-primary" />
-            <div className="pixel-star-bg" />
+        <div className="min-h-screen w-full relative overflow-hidden perspective-3d page-transition" style={{ backgroundColor: 'transparent' }}>
+            {/* Enhanced Background - Full Screen */}
+            <div className="fixed inset-0 animated-gradient-bg" />
+            <div className="fixed inset-0 pattern-dots opacity-[0.08] text-primary" />
+            <div className="fixed inset-0 star-field" />
+            
+            {/* Floating Particles */}
+            {[...Array(8)].map((_, i) => (
+                <div
+                    key={i}
+                    className="fixed floating-particle"
+                    style={{
+                        left: `${Math.random() * 100}%`,
+                        animationDelay: `${Math.random() * 20}s`,
+                        animationDuration: `${15 + Math.random() * 10}s`
+                    }}
+                />
+            ))}
 
-            <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full relative z-10"
-            >
+            {/* Content Container */}
+            <div className="relative z-10 py-16 px-6 flex flex-col items-center max-w-5xl mx-auto">
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full"
+                >
                 <header className="text-center mb-20 relative">
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-12 opacity-5 select-none pointer-events-none">
                         <Trophy size={200} className="text-primary" />
@@ -101,8 +112,8 @@ export const LeaderboardScreen: React.FC = () => {
                     </motion.div>
 
                     <label className="academic-label text-center mb-2">Scientific Resolution</label>
-                    <h1 className="text-6xl font-serif font-black text-neutral-text tracking-tighter leading-tight uppercase relative inline-block" style={{
-                        textShadow: '3px 3px 0px #DC143C, 6px 6px 0px rgba(220, 20, 60, 0.4)',
+                    <h1 className="text-6xl font-serif font-black text-neutral-text tracking-tighter leading-tight uppercase relative inline-block text-glow-red" style={{
+                        textShadow: '3px 3px 0px #DC143C, 6px 6px 0px rgba(220, 20, 60, 0.4), 0 0 40px rgba(220, 20, 60, 0.3)',
                         transform: 'perspective(1000px) rotateX(3deg)'
                     }}>
                         Final Standings
@@ -120,73 +131,290 @@ export const LeaderboardScreen: React.FC = () => {
                     </div>
                 </header>
 
-                <div className="glass-card !p-0" style={{
+                {/* Leaderboard Table */}
+                <div className="premium-card !p-0 overflow-hidden" style={{
                     border: '4px solid #DC143C',
-                    boxShadow: '0 12px 0 #C8102E, 0 24px 0 rgba(200, 16, 46, 0.3)',
+                    boxShadow: '0 12px 0 #C8102E, 0 24px 0 rgba(200, 16, 46, 0.3), 0 0 60px rgba(220, 20, 60, 0.2)',
                     transform: 'perspective(1000px) rotateX(2deg)'
                 }}>
-                    <div className="grid grid-cols-1 divide-y-2" style={{ borderColor: 'rgba(220, 20, 60, 0.1)' }}>
-                        {players.map((player, index) => (
-                            <motion.div
-                                key={player.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className={`flex items-center gap-6 p-6 transition-all relative ${player.id === currentPlayer?.id
-                                    ? 'bg-primary/10'
-                                    : 'hover:bg-neutral-bg'
-                                    }`}
-                                style={player.id === currentPlayer?.id ? {
-                                    borderLeft: '8px solid #DC143C',
-                                    boxShadow: 'inset 4px 0 0 rgba(220, 20, 60, 0.2)'
-                                } : {}}
-                            >
-                                {index < 3 ? (
-                                    <div className={`pixel-medal shrink-0 ${index === 0 ? 'pixel-medal-gold' : index === 1 ? 'pixel-medal-silver' : 'pixel-medal-bronze'}`}>
-                                        {index === 0 ? '🏆' : index === 1 ? '🥈' : '🥉'}
-                                    </div>
-                                ) : (
-                                    <div className="w-14 h-14 flex items-center justify-center font-black text-2xl shrink-0 pixel-border-red text-neutral-text" style={{
-                                        backgroundColor: '#FFF8E1',
-                                        border: '3px solid #DC143C',
-                                        boxShadow: '0 4px 0 #C8102E'
-                                    }}>
-                                        {index + 1}
-                                    </div>
-                                )}
-
-                                <div className="flex-1 flex items-center gap-6">
-                                    <div className="w-12 h-12 bg-neutral-text/5 flex items-center justify-center text-neutral-text/20">
-                                        <User size={28} />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className={`font-black text-xl tracking-tight ${player.id === currentPlayer?.id ? 'text-primary' : 'text-neutral-text'}`}>
-                                                {player.name.toUpperCase()}
-                                            </h3>
-                                            {player.id === currentPlayer?.id && (
-                                                <span className="bg-primary text-white text-[9px] font-black px-2 py-0.5 uppercase tracking-widest leading-none">
-                                                    You
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-4 mt-1">
-                                            <span className="text-[10px] font-black text-neutral-muted uppercase tracking-wider">
-                                                Rank #{index + 1}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="text-right">
-                                    <div className="flex items-baseline gap-1 justify-end">
-                                        <span className="font-black text-3xl text-neutral-text leading-none">{player.score.toLocaleString()}</span>
-                                        <span className="text-[10px] font-black text-neutral-muted uppercase">pts</span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                    {/* Table Header */}
+                    <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 border-b-4 border-primary" style={{
+                        borderColor: '#DC143C',
+                        boxShadow: 'inset 0 -2px 0 rgba(200, 16, 46, 0.3)'
+                    }}>
+                        <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+                            <div className="col-span-1 text-center">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Rank</span>
+                            </div>
+                            <div className="col-span-6">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Player</span>
+                            </div>
+                            <div className="col-span-3 text-center">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Score</span>
+                            </div>
+                            <div className="col-span-2 text-center">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Progress</span>
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Table Body */}
+                    <div className="divide-y-2" style={{ borderColor: 'rgba(220, 20, 60, 0.1)' }}>
+                        <AnimatePresence>
+                            {players.map((player, index) => {
+                                const maxScore = players.length > 0 ? Math.max(...players.map(p => p.score), 1) : 1;
+                                const scorePercentage = (player.score / maxScore) * 100;
+                                const isTopThree = index < 3;
+                                const isCurrentPlayer = player.id === currentPlayer?.id;
+                                
+                                return (
+                                    <motion.div
+                                        key={player.id}
+                                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        transition={{ 
+                                            delay: index * 0.08,
+                                            type: "spring",
+                                            stiffness: 100,
+                                            damping: 15
+                                        }}
+                                        className={`relative overflow-hidden transition-all duration-300 ${
+                                            isCurrentPlayer 
+                                                ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-transparent' 
+                                                : 'hover:bg-gradient-to-r hover:from-neutral-bg/50 hover:via-transparent hover:to-transparent'
+                                        }`}
+                                        style={isCurrentPlayer ? {
+                                            borderLeft: '6px solid #DC143C',
+                                            boxShadow: 'inset 4px 0 0 rgba(220, 20, 60, 0.15), 0 2px 8px rgba(220, 20, 60, 0.1)'
+                                        } : {}}
+                                    >
+                                        {/* Shimmer effect for top 3 */}
+                                        {isTopThree && (
+                                            <div className="absolute inset-0 shimmer opacity-30 pointer-events-none" />
+                                        )}
+
+                                        {/* Glow effect for current player */}
+                                        {isCurrentPlayer && (
+                                            <motion.div
+                                                className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-transparent pointer-events-none"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: [0, 0.5, 0] }}
+                                                transition={{ duration: 2, repeat: Infinity }}
+                                            />
+                                        )}
+
+                                        <div className="grid grid-cols-12 gap-4 px-6 py-5 items-center relative z-10">
+                                            {/* Rank Column */}
+                                            <div className="col-span-1 flex justify-center">
+                                                {isTopThree ? (
+                                                    <motion.div
+                                                        initial={{ scale: 0, rotate: -180 }}
+                                                        animate={{ scale: 1, rotate: 0 }}
+                                                        transition={{ 
+                                                            delay: index * 0.1 + 0.3,
+                                                            type: "spring",
+                                                            stiffness: 200
+                                                        }}
+                                                        className={`premium-medal shrink-0 relative ${
+                                                            index === 0 ? 'pixel-medal-gold' : 
+                                                            index === 1 ? 'pixel-medal-silver' : 
+                                                            'pixel-medal-bronze'
+                                                        }`}
+                                                        style={{
+                                                            width: '64px',
+                                                            height: '64px',
+                                                            fontSize: '28px'
+                                                        }}
+                                                    >
+                                                        {index === 0 && (
+                                                            <motion.div
+                                                                className="absolute -top-2 -right-2"
+                                                                animate={{ rotate: [0, 10, -10, 0] }}
+                                                                transition={{ duration: 2, repeat: Infinity }}
+                                                            >
+                                                                <Sparkles size={16} className="text-secondary" fill="currentColor" />
+                                                            </motion.div>
+                                                        )}
+                                                        {index === 0 ? <Crown size={32} className="text-neutral-text" fill="currentColor" /> :
+                                                         index === 1 ? <Medal size={32} className="text-neutral-text" fill="currentColor" /> :
+                                                         <Award size={32} className="text-neutral-text" fill="currentColor" />}
+                                                    </motion.div>
+                                                ) : (
+                                                    <motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        transition={{ delay: index * 0.05 }}
+                                                        className="relative"
+                                                    >
+                                                        <div className="w-12 h-12 flex items-center justify-center font-black text-xl shrink-0 pixel-border-red text-neutral-text relative" style={{
+                                                            backgroundColor: isCurrentPlayer ? '#FFF8E1' : '#FFFFFF',
+                                                            border: '3px solid #DC143C',
+                                                            boxShadow: '0 4px 0 #C8102E'
+                                                        }}>
+                                                            {index + 1}
+                                                        </div>
+                                                        {isCurrentPlayer && (
+                                                            <motion.div
+                                                                className="absolute -inset-1 border-2 border-primary rounded-sm"
+                                                                animate={{ opacity: [0.5, 1, 0.5] }}
+                                                                transition={{ duration: 1.5, repeat: Infinity }}
+                                                            />
+                                                        )}
+                                                    </motion.div>
+                                                )}
+                                            </div>
+
+                                            {/* Player Info Column */}
+                                            <div className="col-span-6 flex items-center gap-4">
+                                                <div className={`w-14 h-14 flex items-center justify-center rounded-sm relative overflow-hidden ${
+                                                    isTopThree ? 'pixel-border-yellow' : 'pixel-border-red'
+                                                }`} style={{
+                                                    backgroundColor: isTopThree ? '#FFF8E1' : '#FFFFFF',
+                                                    border: isTopThree ? '3px solid #FFCD00' : '3px solid #DC143C',
+                                                    boxShadow: isTopThree 
+                                                        ? '0 4px 0 #FFB700' 
+                                                        : '0 4px 0 #C8102E'
+                                                }}>
+                                                    <User size={32} className={isTopThree ? 'text-secondary' : 'text-primary'} />
+                                                    {isCurrentPlayer && (
+                                                        <div className="absolute inset-0 bg-primary/20 animate-pulse" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 flex flex-col gap-1">
+                                                    <div className="flex items-center gap-3">
+                                                        <h3 className={`font-black text-xl tracking-tight ${
+                                                            isCurrentPlayer ? 'text-primary' : 
+                                                            isTopThree ? 'text-neutral-text' : 
+                                                            'text-neutral-text'
+                                                        }`} style={{
+                                                            textShadow: isTopThree ? '1px 1px 0px rgba(0,0,0,0.1)' : 'none'
+                                                        }}>
+                                                            {player.name.toUpperCase()}
+                                                        </h3>
+                                                        {isCurrentPlayer && (
+                                                            <motion.span
+                                                                initial={{ scale: 0 }}
+                                                                animate={{ scale: 1 }}
+                                                                transition={{ type: "spring", stiffness: 200 }}
+                                                                className="bg-primary text-white text-[10px] font-black px-2.5 py-1 uppercase tracking-widest leading-none pixel-border-red"
+                                                                style={{
+                                                                    boxShadow: '0 2px 0 #C8102E',
+                                                                    border: '2px solid #C8102E'
+                                                                }}
+                                                            >
+                                                                You
+                                                            </motion.span>
+                                                        )}
+                                                        {isTopThree && index === 0 && (
+                                                            <motion.div
+                                                                animate={{ rotate: [0, 10, -10, 0] }}
+                                                                transition={{ duration: 2, repeat: Infinity }}
+                                                            >
+                                                                <TrendingUp size={16} className="text-secondary" />
+                                                            </motion.div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-[10px] font-black text-neutral-muted uppercase tracking-wider">
+                                                            Rank #{index + 1}
+                                                        </span>
+                                                        {isTopThree && (
+                                                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${
+                                                                index === 0 ? 'bg-secondary text-neutral-text' :
+                                                                index === 1 ? 'bg-gray-300 text-neutral-text' :
+                                                                'bg-orange-400 text-white'
+                                                            }`} style={{
+                                                                border: index === 0 ? '2px solid #FFB700' :
+                                                                        index === 1 ? '2px solid #A0A0A0' :
+                                                                        '2px solid #B87333',
+                                                                boxShadow: '0 2px 0 currentColor'
+                                                            }}>
+                                                                {index === 0 ? 'Champion' : index === 1 ? 'Runner-up' : 'Third Place'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Score Column */}
+                                            <div className="col-span-3 text-center">
+                                                <motion.div
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
+                                                    className="flex flex-col items-center gap-1"
+                                                >
+                                                    <div className="flex items-baseline gap-1.5 justify-center">
+                                                        <span className={`font-black text-3xl leading-none ${
+                                                            isTopThree ? 'text-primary' : 'text-neutral-text'
+                                                        }`} style={{
+                                                            textShadow: isTopThree ? '2px 2px 0px rgba(220, 20, 60, 0.2)' : 'none'
+                                                        }}>
+                                                            {player.score.toLocaleString()}
+                                                        </span>
+                                                        <span className="text-[10px] font-black text-neutral-muted uppercase">pts</span>
+                                                    </div>
+                                                    {isTopThree && (
+                                                        <motion.div
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: '100%' }}
+                                                            transition={{ delay: index * 0.1 + 0.5, duration: 0.8 }}
+                                                            className="h-1 bg-gradient-to-r from-primary to-secondary"
+                                                            style={{
+                                                                boxShadow: '0 2px 4px rgba(220, 20, 60, 0.3)'
+                                                            }}
+                                                        />
+                                                    )}
+                                                </motion.div>
+                                            </div>
+
+                                            {/* Progress Column */}
+                                            <div className="col-span-2 flex justify-center">
+                                                <div className="w-full max-w-[80px]">
+                                                    <div className="progress-bar-premium" style={{ height: '12px' }}>
+                                                        <motion.div
+                                                            className="progress-fill-premium"
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${scorePercentage}%` }}
+                                                            transition={{ 
+                                                                delay: index * 0.1 + 0.3,
+                                                                duration: 1,
+                                                                ease: "easeOut"
+                                                            }}
+                                                            style={{
+                                                                background: isTopThree
+                                                                    ? `linear-gradient(135deg, ${index === 0 ? '#FFCD00' : index === 1 ? '#C0C0C0' : '#CD7F32'} 0%, ${index === 0 ? '#FFD700' : index === 1 ? '#A0A0A0' : '#B87333'} 100%)`
+                                                                    : 'linear-gradient(135deg, #DC143C 0%, #E63950 50%, #FF1744 100%)'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Decorative corner accents for top 3 */}
+                                        {isTopThree && (
+                                            <>
+                                                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary opacity-30" />
+                                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary opacity-30" />
+                                            </>
+                                        )}
+                                    </motion.div>
+                                );
+                            })}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Table Footer */}
+                    {players.length > 0 && (
+                        <div className="bg-gradient-to-r from-primary/10 via-transparent to-primary/10 border-t-2 border-primary/20 px-6 py-3">
+                            <div className="flex items-center justify-between text-[10px] font-black text-neutral-muted uppercase tracking-widest">
+                                <span>Total Players: {players.length}</span>
+                                <span>Highest Score: {Math.max(...players.map(p => p.score)).toLocaleString()} pts</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <motion.div
@@ -196,14 +424,15 @@ export const LeaderboardScreen: React.FC = () => {
                     className="mt-12 flex justify-center"
                 >
                     <button
-                        onClick={() => window.location.reload()}
-                        className="btn-primary group"
+                        onClick={() => navigate('/entry')}
+                        className="btn-primary-enhanced group"
                     >
                         <span>Chơi lại</span>
                         <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                     </button>
                 </motion.div>
             </motion.div>
+            </div>
         </div>
     );
 };

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { EntryScreen } from '../pages/EntryScreen';
+import { IntroScreen } from '../pages/IntroScreen';
 import { AdminDashboard } from '../pages/AdminDashboard';
 import { RoomPage } from '../pages/RoomPage';
 import { AdminLogin } from '../pages/AdminLogin';
@@ -14,7 +15,8 @@ export const AppRoutes = () => {
     return (
         <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<EntryScreen />} />
+            <Route path="/" element={<IntroScreen />} />
+            <Route path="/entry" element={<EntryScreen />} />
             <Route path="/room/:roomCode" element={<RoomPage />} />
             <Route path="/leaderboard/:roomId" element={<LeaderboardScreen />} />
 

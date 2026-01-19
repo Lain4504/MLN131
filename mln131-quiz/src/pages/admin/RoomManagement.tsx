@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Users, RefreshCcw, ChevronRight, Square, SkipForward } from 'lucide-react';
+import { ArrowLeft, Play, Users, RefreshCcw, Square, SkipForward } from 'lucide-react';
 import { gameService } from '../../lib/gameService';
 import type { Room, Player, Question } from '../../lib/gameService';
 
@@ -45,7 +45,15 @@ export const RoomManagement: React.FC = () => {
             const currentRoom = rooms.find(r => r.id === roomId);
             if (currentRoom) {
                 setRoom(currentRoom);
-                setQuestions(allQuestions);
+                // Shuffle dựa trên room ID để đảm bảo cùng room có cùng câu hỏi
+                const seed = currentRoom.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const shuffled = [...allQuestions].sort((a, b) => {
+                    const hashA = (a.id + seed).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                    const hashB = (b.id + seed).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                    return hashA - hashB;
+                });
+                const limitedQuestions = shuffled.slice(0, 15);
+                setQuestions(limitedQuestions);
                 const roomPlayers = await gameService.getPlayers(roomId);
                 setPlayers(roomPlayers.sort((a, b) => b.score - a.score));
             }

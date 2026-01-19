@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
-import { Users, Trophy, ChevronRight, GraduationCap, Binary, Star } from 'lucide-react';
+import { Users, ChevronRight, GraduationCap, Binary, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const EntryScreen: React.FC = () => {
@@ -30,23 +30,50 @@ export const EntryScreen: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden bg-neutral-bg perspective-3d">
-            {/* Background Effects - Vietnam Flag Colors */}
-            <div className="absolute inset-0 pattern-dots opacity-[0.08] text-primary" />
-            <div className="absolute top-0 left-0 w-full h-2 bg-primary overflow-hidden pixel-border-red">
-                <div className="w-1/3 h-full bg-primary animate-scan shadow-[0_0_20px_rgba(220,20,60,0.8)]" style={{ boxShadow: '0 0 20px rgba(220,20,60,0.8), inset 0 2px 0 rgba(255,255,255,0.3)' }} />
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden perspective-3d page-transition" style={{ backgroundColor: 'transparent' }}>
+            {/* Enhanced Background Effects */}
+            <div className="absolute inset-0 animated-gradient-bg" />
+            <div className="absolute inset-0 pattern-dots opacity-[0.12] text-primary" />
+            <div className="star-field" />
+            
+            {/* Premium Top Bar with Glow */}
+            <div className="absolute top-0 left-0 w-full h-3 bg-primary overflow-hidden pixel-border-red gradient-glow-red">
+                <div className="w-1/3 h-full bg-primary animate-scan" style={{ 
+                    boxShadow: '0 0 30px rgba(220,20,60,0.9), inset 0 2px 0 rgba(255,255,255,0.4)',
+                    background: 'linear-gradient(90deg, #DC143C, #FF1744, #DC143C)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 2s infinite, scan 10s linear infinite'
+                }} />
             </div>
             
-            {/* Vietnam Star Pattern Background */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
-                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 50px, rgba(255,205,0,0.1) 50px, rgba(255,205,0,0.1) 51px)`,
-                backgroundSize: '100px 100px'
+            {/* Enhanced Vietnam Star Pattern Background */}
+            <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{
+                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 50px, rgba(255,205,0,0.15) 50px, rgba(255,205,0,0.15) 51px),
+                                 repeating-linear-gradient(-45deg, transparent, transparent 60px, rgba(220,20,60,0.08) 60px, rgba(220,20,60,0.08) 61px)`,
+                backgroundSize: '100px 100px, 120px 120px',
+                animation: 'gradientShift 20s ease infinite'
             }} />
 
-            {/* Vietnamized Decorative Gate with 3D */}
-            <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[800px] h-[400px] opacity-[0.04] pointer-events-none grayscale rotate-3d-hover">
-                <img src="/vietnam_propaganda_modern_academic.png" alt="University Gate" className="w-full h-full object-contain" />
+            {/* Enhanced Decorative Gate with Premium Effects */}
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[800px] h-[400px] opacity-[0.06] pointer-events-none grayscale rotate-3d-hover">
+                <div className="relative w-full h-full">
+                    <img src="/vietnam_propaganda_modern_academic.png" alt="University Gate" className="w-full h-full object-contain" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent animate-pulse" />
+                </div>
             </div>
+            
+            {/* Floating Particles */}
+            {[...Array(12)].map((_, i) => (
+                <div
+                    key={i}
+                    className="floating-particle"
+                    style={{
+                        left: `${Math.random() * 100}%`,
+                        animationDelay: `${Math.random() * 20}s`,
+                        animationDuration: `${15 + Math.random() * 10}s`
+                    }}
+                />
+            ))}
 
             <motion.div
                 initial={{ opacity: 0, y: 30 }}
@@ -85,13 +112,16 @@ export const EntryScreen: React.FC = () => {
                         transition={{ delay: 0.4 }}
                         className="space-y-4"
                     >
-                        <h1 className="text-6xl font-serif font-black text-neutral-text tracking-tighter leading-tight uppercase relative inline-block" style={{
-                            textShadow: '3px 3px 0px #DC143C, 6px 6px 0px rgba(220, 20, 60, 0.5)',
+                        <h1 className="text-6xl font-serif font-black text-neutral-text tracking-tighter leading-tight uppercase relative inline-block text-glow-red" style={{
+                            textShadow: '3px 3px 0px #DC143C, 6px 6px 0px rgba(220, 20, 60, 0.5), 0 0 30px rgba(220, 20, 60, 0.3)',
                             transform: 'perspective(1000px) rotateX(5deg)'
                         }}>
                             Đấu trường <span className="text-primary italic relative inline-block">
                                 MLN131
-                                <Star size={24} fill="#FFCD00" className="absolute -top-4 -right-8 star-3d" style={{ filter: 'drop-shadow(2px 2px 0px rgba(255,205,0,0.5))' }} />
+                                <Star size={24} fill="#FFCD00" className="absolute -top-4 -right-8 star-3d" style={{ 
+                                    filter: 'drop-shadow(2px 2px 0px rgba(255,205,0,0.5))',
+                                    animation: 'starPulse 2s ease-in-out infinite'
+                                }} />
                             </span>
                         </h1>
                         <div className="flex items-center justify-center gap-4">
@@ -110,15 +140,10 @@ export const EntryScreen: React.FC = () => {
 
                 <motion.form
                     onSubmit={handleJoin}
-                    className="glass-card flex flex-col relative animate-float-3d"
+                    className="premium-card flex flex-col relative animate-float-3d"
                     initial={{ scale: 0.95, opacity: 0, rotateY: -10 }}
                     animate={{ scale: 1, opacity: 1, rotateY: 0 }}
                     transition={{ delay: 0.5, ease: "easeOut" }}
-                    style={{ 
-                        border: '4px solid #DC143C',
-                        boxShadow: '0 12px 0 #C8102E, 0 24px 0 rgba(200, 16, 46, 0.3)',
-                        transform: 'perspective(1000px) rotateX(2deg)'
-                    }}
                 >
                     {/* 3D Pixel Corner Accents - Vietnam Theme */}
                     <div className="absolute -top-2 -left-2 w-8 h-8 pixel-border-red bg-primary" style={{ 
@@ -154,7 +179,7 @@ export const EntryScreen: React.FC = () => {
                                 <input
                                     type="text"
                                     placeholder="Ví dụ: Đồng chí nghiên cứu sinh"
-                                    className="input-field pl-12"
+                                    className="input-field-enhanced pl-12"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     required
@@ -172,7 +197,7 @@ export const EntryScreen: React.FC = () => {
                                 <input
                                     type="text"
                                     placeholder="MLN131-XXXX"
-                                    className="input-field pl-12 uppercase font-mono tracking-widest"
+                                    className="input-field-enhanced pl-12 uppercase font-mono tracking-widest"
                                     value={room}
                                     onChange={(e) => setRoom(e.target.value)}
                                     required
@@ -199,7 +224,8 @@ export const EntryScreen: React.FC = () => {
                         </button>
 
                         <button 
-                            type="button" 
+                            type="button"
+                            onClick={() => navigate('/')}
                             className="text-[10px] font-black text-neutral-muted uppercase tracking-[0.2em] hover:text-primary transition-all flex items-center justify-center gap-2 pixel-badge hover:scale-105"
                             style={{
                                 borderColor: '#DC143C',
@@ -207,7 +233,7 @@ export const EntryScreen: React.FC = () => {
                                 color: '#666666'
                             }}
                         >
-                            TRUY CẬP KHO DỮ LIỆU LÝ LUẬN
+                            XEM GIỚI THIỆU
                         </button>
                     </div>
                 </motion.form>
