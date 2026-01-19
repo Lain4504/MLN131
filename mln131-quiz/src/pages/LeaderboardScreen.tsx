@@ -51,18 +51,31 @@ export const LeaderboardScreen: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-neutral-bg">
-                <div className="text-center space-y-4">
-                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-neutral-text font-bold">Đang tải bảng xếp hạng...</p>
+            <div className="min-h-screen flex items-center justify-center bg-neutral-bg relative overflow-hidden perspective-3d">
+                <div className="pixel-star-bg" />
+                <div className="text-center space-y-6 relative z-10">
+                    <div className="pixel-spinner mx-auto mb-4" />
+                    <div className="pixel-dots-loading mx-auto mb-4">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <p className="text-neutral-text font-black uppercase pixel-badge" style={{
+                        borderColor: '#DC143C',
+                        backgroundColor: '#FFF8E1',
+                        padding: '8px 16px'
+                    }}>
+                        Đang tải bảng xếp hạng...
+                    </p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen py-16 px-6 flex flex-col items-center max-w-5xl mx-auto relative overflow-hidden bg-neutral-bg">
-            <div className="absolute inset-0 pattern-dots opacity-[0.03] text-primary" />
+        <div className="min-h-screen py-16 px-6 flex flex-col items-center max-w-5xl mx-auto relative overflow-hidden bg-neutral-bg perspective-3d">
+            <div className="absolute inset-0 pattern-dots opacity-[0.04] text-primary" />
+            <div className="pixel-star-bg" />
 
             <motion.div
                 initial={{ opacity: 0, y: 30 }}
@@ -75,43 +88,72 @@ export const LeaderboardScreen: React.FC = () => {
                     </div>
 
                     <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="inline-flex items-center justify-center w-20 h-20 bg-primary text-white shadow-2xl mb-8"
+                        initial={{ scale: 0.8, opacity: 0, rotateY: -90 }}
+                        animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                        transition={{ type: "spring", stiffness: 100 }}
+                        className="inline-flex items-center justify-center w-20 h-20 bg-primary text-white mb-8 pixel-border-red star-3d"
+                        style={{
+                            boxShadow: '0 8px 0 #C8102E, 0 16px 0 rgba(200, 16, 46, 0.5)',
+                            transform: 'perspective(500px) rotateX(5deg)'
+                        }}
                     >
-                        <Trophy size={40} />
+                        <Trophy size={40} fill="currentColor" className="drop-shadow-[2px_2px_0px_rgba(0,0,0,0.3)]" />
                     </motion.div>
 
                     <label className="academic-label text-center mb-2">Scientific Resolution</label>
-                    <h1 className="text-6xl font-serif font-black text-neutral-text tracking-tighter leading-tight uppercase">
+                    <h1 className="text-6xl font-serif font-black text-neutral-text tracking-tighter leading-tight uppercase relative inline-block" style={{
+                        textShadow: '3px 3px 0px #DC143C, 6px 6px 0px rgba(220, 20, 60, 0.4)',
+                        transform: 'perspective(1000px) rotateX(3deg)'
+                    }}>
                         Final Standings
                     </h1>
                     <div className="flex items-center justify-center gap-4 mt-6">
-                        <div className="h-[2px] w-12 bg-primary/20" />
-                        <span className="text-[11px] font-black text-primary uppercase tracking-[0.4em]">Unit MLN131 • Examination Results</span>
-                        <div className="h-[2px] w-12 bg-primary/20" />
+                        <div className="h-[3px] w-12 bg-primary pixel-border-red" style={{ boxShadow: '2px 2px 0px #C8102E' }} />
+                        <span className="text-[11px] font-black text-primary uppercase tracking-[0.4em] pixel-badge" style={{
+                            borderColor: '#DC143C',
+                            backgroundColor: '#FFF8E1',
+                            padding: '4px 12px'
+                        }}>
+                            Unit MLN131 • Examination Results
+                        </span>
+                        <div className="h-[3px] w-12 bg-primary pixel-border-red" style={{ boxShadow: '2px 2px 0px #C8102E' }} />
                     </div>
                 </header>
 
-                <div className="glass-card !p-0 border-2 border-neutral-text/10 shadow-[12px_12px_0px_0px_rgba(153,27,27,0.1)]">
-                    <div className="grid grid-cols-1 divide-y-2 divide-neutral-text/5">
+                <div className="glass-card !p-0" style={{
+                    border: '4px solid #DC143C',
+                    boxShadow: '0 12px 0 #C8102E, 0 24px 0 rgba(200, 16, 46, 0.3)',
+                    transform: 'perspective(1000px) rotateX(2deg)'
+                }}>
+                    <div className="grid grid-cols-1 divide-y-2" style={{ borderColor: 'rgba(220, 20, 60, 0.1)' }}>
                         {players.map((player, index) => (
                             <motion.div
                                 key={player.id}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.1 }}
-                                className={`flex items-center gap-6 p-6 transition-all ${player.id === currentPlayer?.id
-                                    ? 'bg-primary/5 border-l-8 border-primary'
+                                className={`flex items-center gap-6 p-6 transition-all relative ${player.id === currentPlayer?.id
+                                    ? 'bg-primary/10'
                                     : 'hover:bg-neutral-bg'
                                     }`}
+                                style={player.id === currentPlayer?.id ? {
+                                    borderLeft: '8px solid #DC143C',
+                                    boxShadow: 'inset 4px 0 0 rgba(220, 20, 60, 0.2)'
+                                } : {}}
                             >
-                                <div className={`w-14 h-14 flex items-center justify-center font-black text-2xl border-2 shrink-0 ${index === 0 ? 'bg-primary text-white border-primary shadow-[4px_4px_0_0_rgba(212,175,55,1)]' :
-                                    index === 1 ? 'bg-accent-blue text-white border-accent-blue' :
-                                        index === 2 ? 'bg-secondary text-white border-secondary' : 'text-neutral-text border-neutral-text/10 bg-neutral-bg'
-                                    }`}>
-                                    {index + 1}
-                                </div>
+                                {index < 3 ? (
+                                    <div className={`pixel-medal shrink-0 ${index === 0 ? 'pixel-medal-gold' : index === 1 ? 'pixel-medal-silver' : 'pixel-medal-bronze'}`}>
+                                        {index === 0 ? '🏆' : index === 1 ? '🥈' : '🥉'}
+                                    </div>
+                                ) : (
+                                    <div className="w-14 h-14 flex items-center justify-center font-black text-2xl shrink-0 pixel-border-red text-neutral-text" style={{
+                                        backgroundColor: '#FFF8E1',
+                                        border: '3px solid #DC143C',
+                                        boxShadow: '0 4px 0 #C8102E'
+                                    }}>
+                                        {index + 1}
+                                    </div>
+                                )}
 
                                 <div className="flex-1 flex items-center gap-6">
                                     <div className="w-12 h-12 bg-neutral-text/5 flex items-center justify-center text-neutral-text/20">
