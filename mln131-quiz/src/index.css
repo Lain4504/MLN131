@@ -1,81 +1,219 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,700;1,400&display=swap');
 
 @theme {
-  --color-primary: #991B1B;
-  /* Academic Crimson */
-  --color-primary-light: #B91C1C;
-  --color-secondary: #B45309;
-  /* Deep Amber/Gold */
-  --color-secondary-light: #D97706;
-  --color-neutral-bg: #FDFCF0;
-  /* Academic Paper */
+  /* Vietnam Flag Colors */
+  --color-primary: #DC143C;
+  /* Vietnam Red - Cờ đỏ sao vàng */
+  --color-primary-dark: #C8102E;
+  --color-primary-light: #E63950;
+  --color-secondary: #FFCD00;
+  /* Vietnam Gold/Yellow - Sao vàng */
+  --color-secondary-dark: #FFB700;
+  --color-secondary-light: #FFD700;
+  
+  /* Neutrals with pixel aesthetic */
+  --color-neutral-bg: #FFF8E1;
+  /* Light cream background */
   --color-neutral-surface: #FFFFFF;
-  --color-neutral-text: #111827;
-  --color-neutral-muted: #4B5563;
-  --color-accent-blue: #1E3A8A;
-  /* Intellectual Blue */
+  --color-neutral-text: #1A1A1A;
+  --color-neutral-muted: #666666;
+  --color-accent-blue: #1976D2;
+  /* Supporting blue */
 
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'IBM Plex Serif', serif;
   --font-academic: 'Crimson Pro', serif;
 
-  --shadow-premium: 0 10px 30px -10px rgba(153, 27, 27, 0.2);
-  --shadow-gold: 0 10px 30px -10px rgba(180, 83, 9, 0.2);
-  --shadow-constructivist: 8px 8px 0px 0px rgba(153, 27, 27, 0.1);
-  --shadow-constructivist-lg: 20px 20px 0px 0px rgba(153, 27, 27, 0.1);
-  --shadow-constructivist-lg-dark: 20px 20px 0px 0px rgba(153, 27, 27, 0.2);
-  --shadow-constructivist-primary: 8px 8px 0px 0px #991B1B;
+  /* 3D Pixel Shadows - Vietnam themed */
+  --shadow-3d-red: 
+    0 4px 0 #C8102E,
+    0 8px 0 #A00E25,
+    0 12px 0 rgba(168, 14, 37, 0.5);
+  --shadow-3d-yellow:
+    0 4px 0 #FFB700,
+    0 8px 0 #E6A500,
+    0 12px 0 rgba(230, 165, 0, 0.5);
+  --shadow-3d-red-lg:
+    0 8px 0 #C8102E,
+    0 16px 0 #A00E25,
+    0 24px 0 rgba(168, 14, 37, 0.4);
+  --shadow-3d-yellow-lg:
+    0 8px 0 #FFB700,
+    0 16px 0 #E6A500,
+    0 24px 0 rgba(230, 165, 0, 0.4);
+  
+  /* Pixel-perfect shadows */
+  --shadow-pixel-red: 4px 4px 0px #C8102E, 8px 8px 0px rgba(200, 16, 46, 0.3);
+  --shadow-pixel-yellow: 4px 4px 0px #FFB700, 8px 8px 0px rgba(255, 183, 0, 0.3);
+  --shadow-pixel-red-lg: 8px 8px 0px #C8102E, 16px 16px 0px rgba(200, 16, 46, 0.2);
+  
+  /* Legacy shadows for compatibility */
+  --shadow-premium: 0 10px 30px -10px rgba(220, 20, 60, 0.3);
+  --shadow-gold: 0 10px 30px -10px rgba(255, 205, 0, 0.3);
+  --shadow-constructivist: 8px 8px 0px 0px rgba(220, 20, 60, 0.15);
+  --shadow-constructivist-lg: 20px 20px 0px 0px rgba(220, 20, 60, 0.15);
+  --shadow-constructivist-lg-dark: 20px 20px 0px 0px rgba(220, 20, 60, 0.25);
+  --shadow-constructivist-primary: 8px 8px 0px 0px #DC143C;
 
-  --radius-academic: 2px;
-  /* Constructivist sharp edges mixed with subtle rounds */
+  --radius-academic: 0px;
+  /* Pixel-perfect: no border radius */
 }
 
 @layer base {
   body {
-    @apply text-neutral-text antialiased min-h-screen bg-neutral-bg;
+    @apply text-neutral-text min-h-screen bg-neutral-bg;
     font-family: var(--font-sans);
+    /* Pixel grid background */
     background-image:
-      linear-gradient(rgba(153, 27, 27, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(153, 27, 27, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
+      linear-gradient(rgba(220, 20, 60, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(220, 20, 60, 0.04) 1px, transparent 1px),
+      linear-gradient(rgba(255, 205, 0, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 205, 0, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+    /* Disable antialiasing for pixel-perfect text */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
   }
 
   h1,
   h2,
   h3 {
     @apply tracking-tight font-bold;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
   }
 }
 
 @layer components {
+  /* 3D Pixel Button - Vietnam Red */
   .btn-primary {
-    @apply bg-primary text-white px-6 py-3 border-b-4 border-primary-light font-bold transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0 active:border-b-0 cursor-pointer uppercase tracking-widest text-sm flex items-center justify-center gap-2;
+    @apply bg-primary text-white px-6 py-3 font-black cursor-pointer uppercase tracking-widest text-sm flex items-center justify-center gap-2;
+    border: 3px solid #C8102E;
+    box-shadow: var(--shadow-3d-red);
+    transform: perspective(500px) rotateX(0deg);
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s;
+    position: relative;
+  }
+  
+  .btn-primary:hover {
+    transform: perspective(500px) rotateX(5deg) translateY(-2px);
+    box-shadow:
+      0 6px 0 #C8102E,
+      0 12px 0 #A00E25,
+      0 18px 0 rgba(168, 14, 37, 0.6);
+  }
+  
+  .btn-primary:active {
+    transform: perspective(500px) rotateX(0deg) translateY(4px);
+    box-shadow:
+      0 2px 0 #C8102E,
+      0 4px 0 #A00E25;
   }
 
+  /* 3D Pixel Button - Vietnam Yellow */
   .btn-secondary {
-    @apply bg-white text-primary border-2 border-primary px-6 py-3 font-bold transition-all duration-200 hover:bg-primary/5 active:scale-95 cursor-pointer uppercase tracking-widest text-sm flex items-center justify-center gap-2;
+    @apply bg-secondary text-neutral-text px-6 py-3 font-black cursor-pointer uppercase tracking-widest text-sm flex items-center justify-center gap-2;
+    border: 3px solid #FFB700;
+    box-shadow: var(--shadow-3d-yellow);
+    transform: perspective(500px) rotateX(0deg);
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s;
+  }
+  
+  .btn-secondary:hover {
+    transform: perspective(500px) rotateX(5deg) translateY(-2px);
+    box-shadow:
+      0 6px 0 #FFB700,
+      0 12px 0 #E6A500,
+      0 18px 0 rgba(230, 165, 0, 0.6);
+  }
+  
+  .btn-secondary:active {
+    transform: perspective(500px) rotateX(0deg) translateY(4px);
+    box-shadow:
+      0 2px 0 #FFB700,
+      0 4px 0 #E6A500;
   }
 
+  /* 3D Pixel Card */
   .glass-card {
-    @apply bg-white border-2 border-neutral-text/10 shadow-constructivist p-8;
+    @apply bg-white p-8;
+    border: 3px solid #DC143C;
+    box-shadow: var(--shadow-pixel-red-lg);
+    transform: perspective(1000px) rotateX(0deg);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .glass-card:hover {
+    transform: perspective(1000px) rotateX(2deg) translateY(-4px);
+    box-shadow:
+      12px 12px 0px #C8102E,
+      24px 24px 0px rgba(200, 16, 46, 0.25);
   }
 
   .constructivist-box {
-    @apply relative border-l-4 border-primary pl-6 py-4 bg-white shadow-sm;
+    @apply relative pl-6 py-4 bg-white;
+    border-left: 4px solid #DC143C;
+    box-shadow: var(--shadow-pixel-red);
   }
 
+  /* 3D Pixel Input */
   .input-field {
-    @apply w-full px-5 py-4 bg-neutral-bg border-2 border-neutral-text/10 focus:outline-none focus:border-primary transition-colors font-medium;
+    @apply w-full px-5 py-4 bg-neutral-bg font-medium;
+    border: 3px solid #DC143C;
+    box-shadow: inset 4px 4px 0px rgba(220, 20, 60, 0.1), 4px 4px 0px rgba(200, 16, 46, 0.2);
+    transition: all 0.15s;
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: #DC143C;
+    box-shadow: inset 6px 6px 0px rgba(220, 20, 60, 0.15), 6px 6px 0px #C8102E;
+    transform: translate(-2px, -2px);
   }
 
   .academic-label {
-    @apply text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-1 block;
+    @apply text-[10px] font-black uppercase tracking-[0.2em] mb-1 block;
+    color: #DC143C;
+    text-shadow: 1px 1px 0px rgba(220, 20, 60, 0.3);
   }
 
+  /* Pixel Dots Pattern */
   .pattern-dots {
-    background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
-    background-size: 20px 20px;
+    background-image: radial-gradient(circle, currentColor 2px, transparent 2px);
+    background-size: 16px 16px;
+    image-rendering: pixelated;
+  }
+
+  /* 3D Pixel Badge */
+  .pixel-badge {
+    @apply inline-block px-3 py-1 font-black uppercase tracking-wider text-xs;
+    border: 2px solid;
+    box-shadow: 3px 3px 0px currentColor;
+    transform: perspective(200px) rotateX(0deg);
+    transition: transform 0.1s;
+  }
+
+  .pixel-badge:hover {
+    transform: perspective(200px) rotateX(5deg) translateY(-1px);
+    box-shadow: 4px 4px 0px currentColor;
+  }
+
+  /* 3D Pixel Star (Vietnam theme) */
+  .star-3d {
+    filter: drop-shadow(2px 2px 0px rgba(255, 205, 0, 0.5));
+    animation: starPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes starPulse {
+    0%, 100% {
+      transform: scale(1) rotate(0deg);
+      filter: drop-shadow(2px 2px 0px rgba(255, 205, 0, 0.5));
+    }
+    50% {
+      transform: scale(1.1) rotate(5deg);
+      filter: drop-shadow(3px 3px 0px rgba(255, 205, 0, 0.7));
+    }
   }
 }
 
@@ -91,4 +229,369 @@
 
 .animate-scan {
   animation: scan 10s linear infinite;
+}
+
+/* 3D Pixel Effects */
+@keyframes pixelShake {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  10% { transform: translateX(-2px) translateY(-2px); }
+  20% { transform: translateX(2px) translateY(-2px); }
+  30% { transform: translateX(-2px) translateY(2px); }
+  40% { transform: translateX(2px) translateY(2px); }
+  50% { transform: translateX(-2px) translateY(-2px); }
+  60% { transform: translateX(2px) translateY(-2px); }
+  70% { transform: translateX(-2px) translateY(2px); }
+  80% { transform: translateX(2px) translateY(2px); }
+  90% { transform: translateX(-2px) translateY(-2px); }
+}
+
+.animate-pixel-shake {
+  animation: pixelShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes float3D {
+  0%, 100% {
+    transform: perspective(500px) rotateX(0deg) translateY(0px);
+  }
+  50% {
+    transform: perspective(500px) rotateX(5deg) translateY(-10px);
+  }
+}
+
+.animate-float-3d {
+  animation: float3D 3s ease-in-out infinite;
+}
+
+/* Pixel-perfect borders */
+.pixel-border-red {
+  border: 3px solid #DC143C;
+  box-shadow: 4px 4px 0px #C8102E;
+}
+
+.pixel-border-yellow {
+  border: 3px solid #FFCD00;
+  box-shadow: 4px 4px 0px #FFB700;
+}
+
+/* 3D Transform utilities */
+.perspective-3d {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.rotate-3d-hover:hover {
+  transform: perspective(1000px) rotateY(5deg) rotateX(-2deg);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Pixel Loading Spinner */
+.pixel-spinner {
+  width: 48px;
+  height: 48px;
+  position: relative;
+  image-rendering: pixelated;
+}
+
+.pixel-spinner::before,
+.pixel-spinner::after {
+  content: '';
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border: 4px solid #DC143C;
+  border-top-color: transparent;
+  border-right-color: transparent;
+  box-sizing: border-box;
+  clip-path: polygon(0 0, 100% 0, 100% 50%, 50% 50%, 50% 100%, 0 100%);
+}
+
+.pixel-spinner::before {
+  animation: pixelSpin 1s linear infinite;
+  border-color: #DC143C;
+  border-top-color: transparent;
+}
+
+.pixel-spinner::after {
+  animation: pixelSpin 1s linear infinite reverse;
+  border-color: #FFCD00;
+  border-bottom-color: transparent;
+  opacity: 0.5;
+}
+
+@keyframes pixelSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Pixel Dots Loading */
+.pixel-dots-loading {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}
+
+.pixel-dots-loading span {
+  width: 8px;
+  height: 8px;
+  background: #DC143C;
+  display: block;
+  border: 1px solid #C8102E;
+  box-shadow: 0 2px 0 #A00E25;
+  animation: pixelDotBounce 1.4s ease-in-out infinite;
+}
+
+.pixel-dots-loading span:nth-child(1) { animation-delay: 0s; }
+.pixel-dots-loading span:nth-child(2) { animation-delay: 0.2s; background: #FFCD00; border-color: #FFB700; box-shadow: 0 2px 0 #E6A500; }
+.pixel-dots-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pixelDotBounce {
+  0%, 80%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-12px) scale(1.2);
+  }
+}
+
+/* Pixel Notification */
+.pixel-notification {
+  position: fixed;
+  z-index: 1000;
+  padding: 16px 20px;
+  background: white;
+  border: 3px solid;
+  box-shadow: 0 8px 0 currentColor, 0 16px 0 rgba(0, 0, 0, 0.2);
+  transform: perspective(500px) rotateX(0deg);
+  animation: pixelNotificationSlide 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.pixel-notification-success {
+  border-color: #FFCD00;
+  color: #FFCD00;
+}
+
+.pixel-notification-error {
+  border-color: #DC143C;
+  color: #DC143C;
+}
+
+.pixel-notification-info {
+  border-color: #1976D2;
+  color: #1976D2;
+}
+
+@keyframes pixelNotificationSlide {
+  0% {
+    opacity: 0;
+    transform: perspective(500px) rotateX(-10deg) translateX(100px);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(500px) rotateX(0deg) translateX(0);
+  }
+}
+
+/* Pixel Particles */
+.pixel-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #FFCD00;
+  border: 1px solid #FFB700;
+  box-shadow: 0 2px 0 #E6A500;
+  pointer-events: none;
+  animation: pixelParticleFloat 1s ease-out forwards;
+}
+
+@keyframes pixelParticleFloat {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) scale(0.5) rotate(180deg);
+  }
+}
+
+/* Pixel Medal */
+.pixel-medal {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 24px;
+  border: 3px solid;
+  box-shadow: 0 6px 0 currentColor, 0 12px 0 rgba(0, 0, 0, 0.2);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.pixel-medal-gold {
+  background: #FFCD00;
+  border-color: #FFB700;
+  color: #1A1A1A;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
+}
+
+.pixel-medal-silver {
+  background: #C0C0C0;
+  border-color: #A0A0A0;
+  color: #1A1A1A;
+}
+
+.pixel-medal-bronze {
+  background: #CD7F32;
+  border-color: #B87333;
+  color: #FFF8E1;
+}
+
+/* Pixel Progress Bar */
+.pixel-progress {
+  width: 100%;
+  height: 12px;
+  background: #FFF8E1;
+  border: 2px solid #DC143C;
+  box-shadow: inset 2px 2px 0px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.pixel-progress-fill {
+  height: 100%;
+  background: linear-gradient(to bottom, #DC143C, #E63950);
+  border-right: 2px solid #C8102E;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2), 0 2px 0 rgba(255, 255, 255, 0.3);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.pixel-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.1) 4px,
+    rgba(255, 255, 255, 0.1) 8px
+  );
+  animation: pixelProgressScan 1s linear infinite;
+}
+
+@keyframes pixelProgressScan {
+  0% { transform: translateX(-8px); }
+  100% { transform: translateX(0); }
+}
+
+/* Pixel Icon Decorations */
+.pixel-icon-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.pixel-icon-wrapper::before,
+.pixel-icon-wrapper::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.pixel-icon-wrapper::before {
+  top: -2px;
+  left: -2px;
+  box-shadow: 2px 2px 0 currentColor;
+}
+
+.pixel-icon-wrapper::after {
+  bottom: -2px;
+  right: -2px;
+  box-shadow: -2px -2px 0 currentColor;
+}
+
+/* Pixel Glow Effect */
+.pixel-glow {
+  position: relative;
+}
+
+.pixel-glow::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: inherit;
+  filter: blur(8px);
+  opacity: 0.5;
+  z-index: -1;
+  clip-path: polygon(
+    0 0, 100% 0, 100% 100%, 0 100%
+  );
+}
+
+/* Pixel Corner Accent */
+.pixel-corner-accent {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  box-shadow: 2px 2px 0 currentColor;
+}
+
+.pixel-corner-accent-tl {
+  top: -6px;
+  left: -6px;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.pixel-corner-accent-tr {
+  top: -6px;
+  right: -6px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+.pixel-corner-accent-bl {
+  bottom: -6px;
+  left: -6px;
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+}
+
+.pixel-corner-accent-br {
+  bottom: -6px;
+  right: -6px;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* Pixel Star Background */
+.pixel-star-bg {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(2px 2px at 20% 30%, #FFCD00, transparent),
+    radial-gradient(2px 2px at 60% 70%, #DC143C, transparent),
+    radial-gradient(1px 1px at 50% 50%, #FFCD00, transparent),
+    radial-gradient(1px 1px at 80% 10%, #DC143C, transparent),
+    radial-gradient(2px 2px at 90% 60%, #FFCD00, transparent),
+    radial-gradient(1px 1px at 33% 80%, #DC143C, transparent),
+    radial-gradient(2px 2px at 10% 50%, #FFCD00, transparent);
+  background-size: 200px 200px, 150px 150px, 100px 100px, 180px 180px, 120px 120px, 160px 160px, 140px 140px;
+  background-position: 0 0, 40px 60px, 130px 270px, 70px 100px, 200px 200px, 50px 150px, 120px 80px;
+  opacity: 0.1;
+  animation: pixelStarTwinkle 3s ease-in-out infinite;
+  image-rendering: pixelated;
+}
+
+@keyframes pixelStarTwinkle {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.2; }
 }
